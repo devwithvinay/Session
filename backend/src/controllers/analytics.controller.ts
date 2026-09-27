@@ -15,16 +15,16 @@ export const getAnalytics = async function(req:Request , res:Response){
         startOfToday.setHours(0, 0, 0, 0)
 
         //start of tommorrow
-        const startOfTommorrow = new Date();
-        startOfTommorrow.setDate(startOfTommorrow.getDate()+1)
+        const startOfTomorrow = new Date();
+        startOfTomorrow.setDate(startOfTomorrow.getDate()+1)
 
         //Todays complete session
-        const todaySession = await FocusSession.find({
+        const todaySessions = await FocusSession.find({
           user: userId,
           status: "completed",
           startTime: {
             $gte: startOfToday, //greater than or equal to
-            $lt: startOfTommorrow,
+            $lt: startOfTomorrow,
           },
         });
 
@@ -35,7 +35,7 @@ export const getAnalytics = async function(req:Request , res:Response){
         })
 
         // today's total time spend
-        const todayTime = todaySession.reduce(
+        const todayTime = todaySessions.reduce(
             (total , session)=> total + session.duration ,0
         )
 
@@ -48,7 +48,7 @@ export const getAnalytics = async function(req:Request , res:Response){
         const averageTime = allSessions.length > 0 ? Math.floor(totalTime/allSessions.length) : 0;
 
         return res.status(200).json({
-          sucess: true,
+          success: true,
           analytics: {
             todayTime,
             totalTime,
