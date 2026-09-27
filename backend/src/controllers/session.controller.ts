@@ -34,6 +34,7 @@ export const startSession = async function (req: Request, res: Response) {
     return res.status(200).json({
       message: "Focus session started",
       success: true,
+      session
     });
   } catch (error) {
     return res.status(500).json({

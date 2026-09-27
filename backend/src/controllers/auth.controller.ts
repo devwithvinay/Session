@@ -48,7 +48,7 @@ export const registerUser = async function (req: Request, res: Response) {
 
     const transporter = nodemailer.createTransport({
       host: process.env.MAILTRAP_HOST,
-      port: 587,
+      port: process.env.MAILTRAP_PORT,
       secure: false, // use STARTTLS (upgrade connection to TLS after connecting)
       auth: {
         user: process.env.MAILTRAP_USER,
@@ -209,6 +209,7 @@ export const getUser = async function (req: Request, res: Response) {
     return res.status(200).json({
       message: "User fetch successfully",
       success: true,
+      user
     });
 
     //JWT middleware se jo authenticated user's ID req.user mein aayi hai, us ID se MongoDB mein user find karo.

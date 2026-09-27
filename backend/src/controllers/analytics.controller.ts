@@ -1,5 +1,6 @@
 import type {Request , Response} from "express"
 import FocusSession from "../model/FocusSession.js"
+import { calculateStreaks } from "../utils/streaks/streaks.js"
 
 export const getAnalytics = async function(req:Request , res:Response){
     try {
@@ -47,12 +48,18 @@ export const getAnalytics = async function(req:Request , res:Response){
         //Average session duration
         const averageTime = allSessions.length > 0 ? Math.floor(totalTime/allSessions.length) : 0;
 
+        //calculate current and best streak
+
+        const {currentStreak , bestStreak} = calculateStreaks(allSessions)
+
         return res.status(200).json({
           success: true,
           analytics: {
             todayTime,
             totalTime,
             averageTime,
+            currentStreak,
+            bestStreak
 
           },
         });

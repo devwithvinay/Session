@@ -5,7 +5,7 @@ import { cancelSession, completeSession, getSession, startSession } from "../con
 const router = express.Router()
 
 router.post("/start", loggedIn, startSession);
-router.post("/:sessionId/complete", completeSession);
+router.post("/:sessionId/complete", loggedIn, completeSession);
 router.patch("/:session/cancel" , cancelSession)
 //patch existing resource ko partially update karna
 router.get("/",loggedIn,getSession)
