@@ -6,6 +6,7 @@ import cookieParser from "cookie-parser";
 // routes 
 import userRoutes from "./routes/auth.route.js"
 import sessionRoutes from "./routes/session.route.js"
+import analyticsRoutes from "./routes/analytics.routes.js"
 
 
 
@@ -35,6 +36,7 @@ connectDB();
 //routes
 app.use("/api/v1/users",userRoutes)
 app.use("/api/v1/session",sessionRoutes)
+app.use("/api/v1/analytics",analyticsRoutes)
 
 app.listen(port , ()=>{
     console.log(`Server is running on port: ${port}`)
