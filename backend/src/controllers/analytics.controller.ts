@@ -137,3 +137,34 @@ export const getDailyFocus = async function (req: Request, res: Response) {
     })
   }
 };
+
+export const getSessionHistory = async function(req:Request , res:Response){
+  try {
+    const userId = req.user?.id
+    if(!userId){
+      return res.status(400).json({
+        message :"UnAuthorized",
+        success:false
+      })
+    }
+
+    const sessions = await FocusSession.find({
+      user: userId,
+    })
+      .sort({ createdAt: -1 })
+      .select("-__v");
+
+      return res.status(200).json({
+        message:"Session History fetch successfully",
+        success:true,
+        sessions
+      })
+  } catch (error) {
+    console.log('session history error' , error);
+    return res.status(500).json({
+      message: "Failed to fetch session history",
+      success:false,
+      error
+    })
+  }
+}
