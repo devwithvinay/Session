@@ -1,11 +1,12 @@
-import type { Request, Response } from "express";
+import type { NextFunction, Request, Response } from "express";
 import User from "../model/User.model.js";
 import crypto from "crypto";
 import nodemailer from "nodemailer";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { AppError } from "../utils/AppError.js";
 
-export const registerUser = async function (req: Request, res: Response) {
+export const registerUser = async function (req: Request, res: Response, next: NextFunction) {
   // get data from body
   const { username, email, password } = req.body;
 
@@ -74,14 +75,12 @@ export const registerUser = async function (req: Request, res: Response) {
     });
   } catch (error) {
     console.error("Register error:", error);
+    next(error);
 
-    return res.status(500).json({
-      message: "Internal server error",
-    });
   }
 };
 
-export const verifyUser = async function (req: Request, res: Response) {
+export const verifyUser = async function (req: Request, res: Response, next: NextFunction) {
   //get token from param to verify with database
   const { token } = req.params;
 
@@ -118,6 +117,7 @@ export const verifyUser = async function (req: Request, res: Response) {
       success: true,
     });
   } catch (error) {
+    next(error);
     return res.status(500).json({
       message: "Failed to verify User",
       success: false,
@@ -126,7 +126,11 @@ export const verifyUser = async function (req: Request, res: Response) {
   }
 };
 
-export const loginUser = async function (req: Request, res: Response) {
+export const loginUser = async function (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
   const { email, password } = req.body;
 
   try {
@@ -189,31 +193,32 @@ export const loginUser = async function (req: Request, res: Response) {
       success: true,
     });
   } catch (error) {
+    next(error);
     return res.status(500).json({
       message: "Failed to login",
+      success: false,
     });
   }
 };
 
-export const getUser = async function (req: Request, res: Response) {
+export const getUser = async function (req: Request, res: Response, next: NextFunction) {
   try {
     // req.user exist karta hai, tab uska id do nhi to undefined return ker do
     const user = await User.findById(req.user?.id).select("-password");
 
     if (!user) {
-      return res.status(400).json({
-        message: "User not found",
-      });
+      throw new AppError("User not found",404)
     }
 
     return res.status(200).json({
       message: "User fetch successfully",
       success: true,
-      user
+      user,
     });
 
     //JWT middleware se jo authenticated user's ID req.user mein aayi hai, us ID se MongoDB mein user find karo.
   } catch (error) {
+    next(error);
     return res.status(500).json({
       message: "Failed to fetch user",
       success: false,
@@ -222,7 +227,11 @@ export const getUser = async function (req: Request, res: Response) {
   }
 };
 
-export const logout = async function (req: Request, res: Response) {
+export const logout = async function (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
   try {
     res.cookie("token", "", {
       expires: new Date(0),
@@ -232,6 +241,7 @@ export const logout = async function (req: Request, res: Response) {
       message: "Logout Successfully",
     });
   } catch (error) {
+    next(error);
     return res.status(500).json({
       message: "Failed",
       error,
@@ -239,7 +249,11 @@ export const logout = async function (req: Request, res: Response) {
   }
 };
 
-export const forgotPassword = async function (req: Request, res: Response) {
+export const forgotPassword = async function (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
   const { email } = req.body;
 
   try {
@@ -284,26 +298,26 @@ export const forgotPassword = async function (req: Request, res: Response) {
 
     return res.status(200).json({
       message: "Password reset link send successfully",
-      success:true
+      success: true,
     });
-
-
   } catch (error) {
-     return res.status(500).json({
-       message: "Failed to forgot password",
-       success: false,
-       error
-     });
+    next(error);
+    return res.status(500).json({
+      message: "Failed to forgot password",
+      success: false,
+      error,
+    });
   }
 };
 
-export const resetpassword = async function(req:Request , res:Response){
+export const resetpassword = async function(req:Request , res:Response, next:NextFunction){
   const {resetToken} = req.params ;
   // reset token nhi h to //IMP
   try {
       if (!resetToken) {
         return res.status(400).json({
           message: "Invalid token",
+          success: false,
         });
       }
 
@@ -348,6 +362,7 @@ export const resetpassword = async function(req:Request , res:Response){
       })
     
   } catch (error) {
+    next(error);
     return res.status(500).json({
       message: "Failed to reset password",
       success:false,
