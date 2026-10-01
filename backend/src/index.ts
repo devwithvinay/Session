@@ -8,12 +8,17 @@ import userRoutes from "./routes/auth.route.js"
 import sessionRoutes from "./routes/session.route.js"
 import analyticsRoutes from "./routes/analytics.routes.js"
 import { errorHandler } from "./middleware/error.middleware.js";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
+
 
 
 
 dotenv.config();
 
 const app = express();
+app.use(helmet());
+
 
 const port = process.env.PORT || 8080
 
@@ -30,6 +35,17 @@ app.use(
   }),
 );
 
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: {
+    message: "Too many attemps",
+    success:false
+  }
+});
+
+app.use(limiter)
+
 
 // db connect 
 connectDB();
@@ -38,6 +54,8 @@ connectDB();
 app.use("/api/v1/users",userRoutes)
 app.use("/api/v1/session",sessionRoutes)
 app.use("/api/v1/analytics",analyticsRoutes)
+
+// global error handle
 
 app.use(errorHandler)
 
