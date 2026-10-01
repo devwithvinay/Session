@@ -1,7 +1,8 @@
-import type { Request, Response } from "express";
+import type {NextFunction, Request, Response } from "express";
 import FocusSession from "../model/FocusSession.js";
 
-export const startSession = async function (req: Request, res: Response) {
+
+export const startSession = async function (req: Request, res: Response , next: NextFunction) {
   // user Id auth middleware se aygi
   const userId = req.user?.id;
   try {
@@ -37,15 +38,15 @@ export const startSession = async function (req: Request, res: Response) {
       session
     });
   } catch (error) {
-    return res.status(500).json({
-      message: "Failed to start session",
-      success: false,
-      error,
-    });
+    next(error)
   }
 };
 
-export const completeSession = async function (req: Request, res: Response) {
+export const completeSession = async function (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
   const userId = req.user?.id;
   const { sessionId } = req.params;
 
@@ -92,15 +93,15 @@ export const completeSession = async function (req: Request, res: Response) {
       session,
     });
   } catch (error) {
-    return res.status(500).json({
-      message: "failed to complete session",
-      success: false,
-      error,
-    });
+    next(error);
   }
 };
 
-export const cancelSession = async function (req: Request, res: Response) {
+export const cancelSession = async function (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
   try {
     const userId = req.user?.id;
     const { sessionId } = req.params;
@@ -118,39 +119,37 @@ export const cancelSession = async function (req: Request, res: Response) {
       });
     }
     const cancelsession = await FocusSession.findOne({
-      _id:sessionId,
+      _id: sessionId,
       user: userId,
-      status:"active"
+      status: "active",
+    });
 
-    })
-
-    if(!cancelsession){
+    if (!cancelsession) {
       return res.status(400).json({
-        message:"Active session is not found"
-      })
+        message: "Active session is not found",
+        success: false, 
+      });
     }
 
-    const endTime = new Date()
-    const duration = Math.floor((endTime.getTime() - cancelsession.startTime.getTime())/1000,)
+    const endTime = new Date();
+    const duration = Math.floor(
+      (endTime.getTime() - cancelsession.startTime.getTime()) / 1000,
+    );
 
-    cancelsession.endTime = endTime
-    cancelsession.duration = duration
-    cancelsession.status = "cancelled"
+    cancelsession.endTime = endTime;
+    cancelsession.duration = duration;
+    cancelsession.status = "cancelled";
 
     await cancelsession.save();
-
   } catch (error) {
-    return res.status(500).json({
-      message:"failed to cancel session",
-      error,
-      success:false
-    })
+    next(error);
   }
 };
 
-export const getSession = async function (req: Request, res: Response) {
+export const getSession = async function ( req: Request, res: Response , next: NextFunction) {
   try {
     const userId = req.user?.id
+
     if(!userId){
          return res.status(401).json({
         message: "Unauthorized",
@@ -158,22 +157,65 @@ export const getSession = async function (req: Request, res: Response) {
       });
     }
 
-    const getsession =await FocusSession.findOne({
+    const session =await FocusSession.findOne({
       user:userId,
     }).sort({
       createdAt:-1
-    })
+    });
 
     return res.status(200).json({
       message:"fetching successfully",
-      success:true
+      success:true,
+      session,
     })
   } catch (error) {
-    return res.status(500).json({
-      message:"Failed to fetch",
-      error,
-      success:false
-    })
-    
+    next(error)
   }
 };
+
+
+export const getSessionHistory = async function ( req: Request, res: Response , next: NextFunction) {
+
+  try {
+   const userId = req.user?.id
+
+   if(!userId){
+    return res.status(400).json({
+      message:"UnAuthorized"
+    })
+   }
+   const page = Number(req.query.page) || 1;
+   const limit = Number(req.query.limit) || 20
+
+   const skip = (page-1)* limit
+
+    const sessions = await FocusSession.find({
+      user: userId
+    }).sort({
+      createdAt: -1
+    })
+    .skip(skip)
+    .limit(limit);
+
+    const totalSessions = await FocusSession.countDocuments({
+      user: userId,
+    })
+
+    const totalPages = Math.ceil(totalSessions / limit)
+
+    return res.status(200).json({
+      message: "Session history fetched successfully",
+      success: true,
+      sessions,
+      pagination:{
+        page,
+        limit,
+        totalSessions,
+        totalPages
+      }
+    });
+  } catch (error) {
+    next(error)
+    
+  }
+}

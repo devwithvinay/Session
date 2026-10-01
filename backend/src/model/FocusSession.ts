@@ -37,6 +37,10 @@ const focusSessionSchema = new mongoose.Schema<IFocusSession>(
   { timestamps: true },
 );
 
+// database indexes
+focusSessionSchema.index({user:1 , startTime: -1});
+focusSessionSchema.index({user:1 , status: 1})
+
 const FocusSession = mongoose.model<IFocusSession>("FocusSession" , focusSessionSchema)
 
 export default FocusSession;
