@@ -141,6 +141,13 @@ export const cancelSession = async function (
     cancelsession.status = "cancelled";
 
     await cancelsession.save();
+
+    return res.status(200).json({
+      message: "Focus session cancelled",
+      success: true,
+      session: cancelsession,
+    });
+    
   } catch (error) {
     next(error);
   }
