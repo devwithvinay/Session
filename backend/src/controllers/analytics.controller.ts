@@ -89,7 +89,7 @@ export const getDailyFocus = async function (req: Request, res: Response) {
       {
         $match: {
           user: new mongoose.Types.ObjectId(userId),
-          status: "complted",
+          status: "completed",
         },
       },
       {
