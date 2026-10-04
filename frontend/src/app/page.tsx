@@ -1,20 +1,44 @@
-import CTA from "@/components/CTA";
-import Features from "@/components/Features";
-import Footer from "@/components/Footer";
-import Hero from "@/components/Hero";
-import Leaderboard from "@/components/Leaderboard";
+import Image from "next/image";
+
 import Navbar from "@/components/Navbar";
-import Stats from "@/components/Stats";
+import Hero from "@/components/Hero";
+import Dashboard from "@/components/Dashboard";
+import Features from "@/components/Features";
+import Leaderboard from "@/components/Leaderboard";
+
+import Footer from "@/components/Footer";
 
 export default function Home() {
   return (
     <main>
-      <Navbar />
-      <Hero />
+      {/* HERO */}
+      <section className="relative min-h-screen">
+        <Image
+          src="/images/background.png"
+          alt="Session background"
+          fill
+          priority
+          quality={75}
+          sizes="100vw"
+          className="object-cover object-center"
+        />
+
+        <div className="relative z-10 min-h-screen">
+          <Navbar />
+          <Hero />
+        </div>
+      </section>
+
+      {/* DASHBOARD */}
+      <Dashboard />
+
+      {/* FEATURES */}
       <Features />
-      <Stats />
+
+      {/* LEADERBOARD */}
       <Leaderboard />
-      <CTA />
+
+      {/* FOOTER */}
       <Footer />
     </main>
   );

@@ -1,132 +1,171 @@
-
-export default function Footer() {
+function Footer() {
   return (
-    <footer className="border-t bg-white">
-      <div className="mx-auto max-w-6xl px-6 py-16">
-        <div className="grid gap-12 md:grid-cols-5">
+    <footer id="about" className="bg-[#2F3133] px-6 py-20 text-white md:py-24">
+      <div className="mx-auto max-w-7xl">
+        {/* Main Footer */}
+        <div className="grid gap-16 md:grid-cols-12">
           {/* Brand */}
-          <div className="md:col-span-2">
-            <div className="text-xl font-semibold tracking-tight">
+          <div className="md:col-span-5">
+            <h2 className="text-3xl font-semibold tracking-[-0.04em]">
               Session
-            </div>
+            </h2>
 
-            <p className="mt-4 max-w-sm text-sm leading-6 text-gray-500">
-              A simple productivity workspace to help you focus,
-              manage your time, and make meaningful progress every day.
+            <p className="mt-5 max-w-md text-sm leading-7 text-white/55">
+              A simple workspace to track your time, stay focused, and build
+              better productivity habits.
             </p>
 
-            <div className="mt-6 flex gap-3">
+            <a
+              href="#"
+              className="mt-8 inline-flex items-center rounded-full border border-white/15 px-5 py-2.5 text-sm text-white/75 transition hover:border-white/30 hover:bg-white/10 hover:text-white"
+            >
+              Get Started
+              <span className="ml-2">→</span>
+            </a>
+          </div>
+
+          {/* Links */}
+          <div className="grid grid-cols-2 gap-10 sm:grid-cols-3 md:col-span-7">
+            {/* Product */}
+            <div>
+              <h3 className="text-xs font-medium uppercase tracking-[0.18em] text-white/35">
+                Product
+              </h3>
+
+              <div className="mt-6 space-y-4">
+                <a
+                  href="#"
+                  className="block text-sm text-white/60 transition hover:text-white"
+                >
+                  Features
+                </a>
+
+                <a
+                  href="#"
+                  className="block text-sm text-white/60 transition hover:text-white"
+                >
+                  Analytics
+                </a>
+
+                <a
+                  href="#"
+                  className="block text-sm text-white/60 transition hover:text-white"
+                >
+                  Sessions
+                </a>
+
+                <a
+                  href="#"
+                  className="block text-sm text-white/60 transition hover:text-white"
+                >
+                  Leaderboard
+                </a>
+              </div>
+            </div>
+
+            {/* Company */}
+            <div>
+              <h3 className="text-xs font-medium uppercase tracking-[0.18em] text-white/35">
+                Company
+              </h3>
+
+              <div className="mt-6 space-y-4">
+                <a
+                  href="#"
+                  className="block text-sm text-white/60 transition hover:text-white"
+                >
+                  About
+                </a>
+
+                <a
+                  href="#"
+                  className="block text-sm text-white/60 transition hover:text-white"
+                >
+                  Contact
+                </a>
+
+                <a
+                  href="#"
+                  className="block text-sm text-white/60 transition hover:text-white"
+                >
+                  Blog
+                </a>
+
+                <a
+                  href="#"
+                  className="block text-sm text-white/60 transition hover:text-white"
+                >
+                  GitHub
+                </a>
+              </div>
+            </div>
+
+            {/* Legal */}
+            <div>
+              <h3 className="text-xs font-medium uppercase tracking-[0.18em] text-white/35">
+                Legal
+              </h3>
+
+              <div className="mt-6 space-y-4">
+                <a
+                  href="#"
+                  className="block text-sm text-white/60 transition hover:text-white"
+                >
+                  Privacy
+                </a>
+
+                <a
+                  href="#"
+                  className="block text-sm text-white/60 transition hover:text-white"
+                >
+                  Terms
+                </a>
+
+                <a
+                  href="#"
+                  className="block text-sm text-white/60 transition hover:text-white"
+                >
+                  Security
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom */}
+        <div className="mt-20 border-t border-white/10 pt-7">
+          <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+            <p className="text-xs text-white/35">
+              © {new Date().getFullYear()} Session. All rights reserved.
+            </p>
+
+            <div className="flex items-center gap-6">
               <a
                 href="#"
-                className="flex h-9 w-9 items-center justify-center rounded-full border text-sm text-gray-600 transition-colors hover:bg-gray-100 hover:text-black"
+                className="text-xs text-white/40 transition hover:text-white"
               >
                 X
               </a>
 
               <a
                 href="#"
-                className="flex h-9 w-9 items-center justify-center rounded-full border text-sm text-gray-600 transition-colors hover:bg-gray-100 hover:text-black"
+                className="text-xs text-white/40 transition hover:text-white"
               >
-                in
+                GitHub
               </a>
 
               <a
                 href="#"
-                className="flex h-9 w-9 items-center justify-center rounded-full border text-sm text-gray-600 transition-colors hover:bg-gray-100 hover:text-black"
+                className="text-xs text-white/40 transition hover:text-white"
               >
-                GH
+                LinkedIn
               </a>
             </div>
           </div>
-
-          {/* Product */}
-          <div>
-            <h3 className="text-sm font-semibold">
-              Product
-            </h3>
-
-            <div className="mt-4 flex flex-col gap-3 text-sm text-gray-500">
-              <a href="#features" className="hover:text-black">
-                Features
-              </a>
-
-              <a href="#stats" className="hover:text-black">
-                Stats
-              </a>
-
-              <a href="#preview" className="hover:text-black">
-                Preview
-              </a>
-
-              <a href="#" className="hover:text-black">
-                Pricing
-              </a>
-            </div>
-          </div>
-
-          {/* Company */}
-          <div>
-            <h3 className="text-sm font-semibold">
-              Company
-            </h3>
-
-            <div className="mt-4 flex flex-col gap-3 text-sm text-gray-500">
-              <a href="#about" className="hover:text-black">
-                About
-              </a>
-
-              <a href="#" className="hover:text-black">
-                Blog
-              </a>
-
-              <a href="#" className="hover:text-black">
-                Contact
-              </a>
-
-              <a href="#" className="hover:text-black">
-                Careers
-              </a>
-            </div>
-          </div>
-
-          {/* Resources */}
-          <div>
-            <h3 className="text-sm font-semibold">
-              Resources
-            </h3>
-
-            <div className="mt-4 flex flex-col gap-3 text-sm text-gray-500">
-              <a href="#" className="hover:text-black">
-                Documentation
-              </a>
-
-              <a href="#" className="hover:text-black">
-                Help Center
-              </a>
-
-              <a href="#" className="hover:text-black">
-                Privacy
-              </a>
-
-              <a href="#" className="hover:text-black">
-                Terms
-              </a>
-            </div>
-          </div>
-        </div>
-
-        {/* Bottom */}
-        <div className="mt-16 flex flex-col gap-4 border-t pt-6 text-sm text-gray-500 md:flex-row md:items-center md:justify-between">
-          <p>
-            © 2026 Session. All rights reserved.
-          </p>
-
-          <p>
-            Built for better focus.
-          </p>
         </div>
       </div>
     </footer>
   );
 }
 
+export default Footer;
