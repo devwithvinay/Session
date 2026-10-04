@@ -1,80 +1,143 @@
-const stats = [
-  {
-    label: "Focus Time",
-    value: "2h 35m",
-    change: "12%",
-    comparison: "vs yesterday",
-    type: "focus",
-  },
-  {
-    label: "Sessions",
-    value: "6",
-    change: "50%",
-    comparison: "vs yesterday",
-    type: "sessions",
-  },
-  {
-    label: "Streak",
-    value: "7 days",
-    change: "100%",
-    comparison: "vs last week",
-    type: "streak",
-  },
-];
+"use client";
+
+import { useEffect, useState } from "react";
+import { apiFetch } from "../../lib/api";
+
+interface Analytics {
+  todayTime: number;
+  todaySessions: number;
+  totalTime: number;
+  averageTime: number;
+  currentStreak: number;
+  bestStreak: number;
+}
+
+interface AnalyticsResponse {
+  success: boolean;
+  analytics: Analytics;
+}
 
 export default function StatCards() {
+  const [analytics, setAnalytics] = useState<Analytics | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchAnalytics = async () => {
+      try {
+        const data = await apiFetch<AnalyticsResponse>("/analytics");
+        setAnalytics(data.analytics);
+      } catch (error) {
+        console.error("Failed to fetch analytics:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAnalytics();
+  }, []);
+
+  const formatTime = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    }
+
+    return `${minutes}m`;
+  };
+
+  const focusTime = analytics ? formatTime(analytics.todayTime) : "0m";
+
+  const sessions = analytics?.todaySessions ?? 0;
+
+  const streak = analytics?.currentStreak ?? 0;
+
   return (
-    <section className="mt-7 grid gap-5 lg:grid-cols-3">
-      {stats.map((stat) => (
-        <div
-          key={stat.label}
-          className="relative h-[165px] overflow-hidden rounded-2xl border border-white/35 bg-white/[0.28] p-6 shadow-[0_18px_50px_rgba(15,23,42,0.10)] backdrop-blur-2xl"
-        >
-          <div className="flex items-start gap-5">
-            {/* Icon */}
-            <div
-              className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-white shadow-lg ${
-                stat.type === "focus"
-                  ? "bg-indigo-500"
-                  : stat.type === "sessions"
-                    ? "bg-blue-500"
-                    : "bg-orange-400"
-              }`}
-            >
-              {stat.type === "focus" && <ClockIcon />}
-              {stat.type === "sessions" && <SessionsIcon />}
-              {stat.type === "streak" && <FlameIcon />}
-            </div>
+    <section className="grid gap-5 md:grid-cols-3">
+      {/* Focus Time */}
+      <div className="rounded-2xl border border-white/35 bg-white/[0.30] p-5 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-2xl">
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="text-sm text-slate-500">Focus Time</p>
 
-            <div>
-              <p className="text-[15px] font-medium text-slate-500">
-                {stat.label}
-              </p>
+            <h3 className="mt-2 text-2xl font-semibold tracking-tight text-slate-800">
+              {loading ? "..." : focusTime}
+            </h3>
 
-              <p className="mt-3 text-[29px] font-medium tracking-[-0.05em] text-slate-800">
-                {stat.value}
-              </p>
-
-              <div className="mt-1 flex items-center gap-2">
-                <span className="text-sm font-medium text-emerald-500">
-                  ↑ {stat.change}
-                </span>
-
-                <span className="text-xs text-slate-400">
-                  {stat.comparison}
-                </span>
-              </div>
-            </div>
+            <p className="mt-1 text-xs text-slate-400">Today</p>
           </div>
 
-          {/* Decorative mini chart */}
-          <div className="absolute bottom-5 right-5 opacity-35">
-            {stat.type === "focus" && <FocusChart />}
-            {stat.type === "sessions" && <BarsChart />}
-            {stat.type === "streak" && <StreakChart />}
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-100/70 text-sky-600">
+            <ClockIcon />
           </div>
         </div>
-      ))}
+
+        <div className="mt-5 h-1.5 overflow-hidden rounded-full bg-slate-200/60">
+          <div className="h-full w-[68%] rounded-full bg-sky-500/70" />
+        </div>
+      </div>
+
+      {/* Sessions */}
+      <div className="rounded-2xl border border-white/35 bg-white/[0.30] p-5 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-2xl">
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="text-sm text-slate-500">Sessions</p>
+
+            <h3 className="mt-2 text-2xl font-semibold tracking-tight text-slate-800">
+              {loading ? "..." : sessions}
+            </h3>
+
+            <p className="mt-1 text-xs text-slate-400">Completed today</p>
+          </div>
+
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-100/70 text-violet-600">
+            <SessionIcon />
+          </div>
+        </div>
+
+        <div className="mt-5 flex items-end gap-1">
+          {[35, 55, 42, 70, 50, 82, 62].map((height, index) => (
+            <div
+              key={index}
+              className="flex-1 rounded-full bg-violet-400/50"
+              style={{ height: `${height / 2}px` }}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Streak */}
+      <div className="rounded-2xl border border-white/35 bg-white/[0.30] p-5 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-2xl">
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="text-sm text-slate-500">Streak</p>
+
+            <h3 className="mt-2 text-2xl font-semibold tracking-tight text-slate-800">
+              {loading ? "..." : `${streak} days`}
+            </h3>
+
+            <p className="mt-1 text-xs text-slate-400">Current streak</p>
+          </div>
+
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-100/70 text-orange-500">
+            <FireIcon />
+          </div>
+        </div>
+
+        <div className="mt-5 flex gap-1.5">
+          {Array.from({ length: 7 }).map((_, index) => (
+            <div
+              key={index}
+              className={`h-1.5 flex-1 rounded-full ${
+                index < Math.min(streak, 7)
+                  ? "bg-orange-400/70"
+                  : "bg-slate-200/60"
+              }`}
+            />
+          ))}
+        </div>
+      </div>
     </section>
   );
 }
@@ -83,89 +146,52 @@ export default function StatCards() {
 
 function ClockIcon() {
   return (
-    <svg width="25" height="25" viewBox="0 0 24 24" fill="none">
-      <circle cx="12" cy="12" r="8" stroke="white" strokeWidth="2" />
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="8.5" stroke="currentColor" strokeWidth="1.7" />
 
       <path
-        d="M12 8v4l3 2"
-        stroke="white"
-        strokeWidth="2"
+        d="M12 7v5l3 2"
+        stroke="currentColor"
+        strokeWidth="1.7"
         strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function SessionsIcon() {
-  return (
-    <svg width="25" height="25" viewBox="0 0 24 24" fill="none">
-      <rect
-        x="5"
-        y="4"
-        width="14"
-        height="16"
-        rx="3"
-        stroke="white"
-        strokeWidth="1.8"
-      />
-
-      <path
-        d="M8 8h8M8 12h8M8 16h5"
-        stroke="white"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function FlameIcon() {
-  return (
-    <svg width="25" height="25" viewBox="0 0 24 24" fill="none">
-      <path
-        d="M12 21c4.4 0 7-2.8 7-6.5 0-3.5-2.4-5.6-4.7-8.2-.5 2-1.5 3.3-2.8 4.1.1-3.4-1.2-6-3.6-8.1.1 3.2-3.4 5.8-3.4 10.2C4.5 17.8 7.5 21 12 21Z"
-        stroke="white"
-        strokeWidth="1.8"
         strokeLinejoin="round"
       />
     </svg>
   );
 }
 
-/* ---------------- MINI CHARTS ---------------- */
-
-function FocusChart() {
+function SessionIcon() {
   return (
-    <svg width="100" height="58" viewBox="0 0 100 58" fill="none">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+      <rect
+        x="4"
+        y="5"
+        width="16"
+        height="14"
+        rx="3"
+        stroke="currentColor"
+        strokeWidth="1.7"
+      />
+
       <path
-        d="M3 48C12 42 15 29 24 35C34 42 38 25 47 30C56 35 61 17 70 25C79 34 82 7 97 5"
-        stroke="#5B8DEF"
-        strokeWidth="3"
+        d="M8 9h8M8 13h5"
+        stroke="currentColor"
+        strokeWidth="1.7"
         strokeLinecap="round"
       />
     </svg>
   );
 }
 
-function BarsChart() {
+function FireIcon() {
   return (
-    <svg width="100" height="60" viewBox="0 0 100 60" fill="none">
-      <rect x="5" y="36" width="10" height="20" rx="5" fill="#6EA2F8" />
-      <rect x="25" y="27" width="10" height="29" rx="5" fill="#6EA2F8" />
-      <rect x="45" y="18" width="10" height="38" rx="5" fill="#6EA2F8" />
-      <rect x="65" y="9" width="10" height="47" rx="5" fill="#6EA2F8" />
-      <rect x="85" y="2" width="10" height="54" rx="5" fill="#6EA2F8" />
-    </svg>
-  );
-}
-
-function StreakChart() {
-  return (
-    <svg width="100" height="60" viewBox="0 0 100 60" fill="none">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
       <path
-        d="M2 53C17 48 18 34 31 38C43 42 43 18 57 27C69 35 68 6 81 18C89 25 91 9 98 3V58H2V53Z"
-        fill="#F6B15B"
-        opacity="0.6"
+        d="M12 21c4.2 0 7-2.8 7-6.7 0-3.2-1.8-5.3-4.4-7.8.1 2.1-.8 3.4-2 4.1.1-3.8-1.7-6.3-4-8.6.2 3.5-2.6 5.5-2.6 9.2C6 17.5 8.4 21 12 21Z"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
     </svg>
   );

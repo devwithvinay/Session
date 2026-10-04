@@ -1,54 +1,96 @@
 "use client";
 
-const weeks = [
-  [
-    { day: 28, muted: true },
-    { day: 29, muted: true },
-    { day: 30, muted: true },
-    { day: 1 },
-    { day: 2 },
-    { day: 3 },
-    { day: 4, selected: true },
-  ],
-  [
-    { day: 5 },
-    { day: 6 },
-    { day: 7 },
-    { day: 8 },
-    { day: 9 },
-    { day: 10 },
-    { day: 11 },
-  ],
-  [
-    { day: 12 },
-    { day: 13 },
-    { day: 14 },
-    { day: 15 },
-    { day: 16 },
-    { day: 17 },
-    { day: 18 },
-  ],
-  [
-    { day: 19 },
-    { day: 20 },
-    { day: 21 },
-    { day: 22 },
-    { day: 23 },
-    { day: 24 },
-    { day: 25 },
-  ],
-  [
-    { day: 26 },
-    { day: 27 },
-    { day: 28 },
-    { day: 29 },
-    { day: 30 },
-    { day: 31 },
-    { day: 1, muted: true },
-  ],
-];
+import { useMemo, useState } from "react";
 
 export default function CalendarCard() {
+  const [currentDate, setCurrentDate] = useState(new Date());
+
+  const calendar = useMemo(() => {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+
+    const firstDay = new Date(year, month, 1);
+
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    // Monday = 0 ... Sunday = 6
+    const firstDayIndex = (firstDay.getDay() + 6) % 7;
+
+    const previousMonthDays = new Date(year, month, 0).getDate();
+
+    const cells = [];
+
+    // Previous month's trailing days
+    for (let i = firstDayIndex - 1; i >= 0; i--) {
+      cells.push({
+        day: previousMonthDays - i,
+        muted: true,
+        selected: false,
+      });
+    }
+
+    // Current month
+    for (let day = 1; day <= daysInMonth; day++) {
+      const today = new Date();
+
+      const isToday =
+        day === today.getDate() &&
+        month === today.getMonth() &&
+        year === today.getFullYear();
+
+      cells.push({
+        day,
+        muted: false,
+        selected: isToday,
+      });
+    }
+
+    // Next month's leading days
+    const remainingCells =
+      35 - cells.length <= 0 ? 42 - cells.length : 35 - cells.length;
+
+    for (let day = 1; day <= remainingCells; day++) {
+      cells.push({
+        day,
+        muted: true,
+        selected: false,
+      });
+    }
+
+    const weeks = [];
+
+    for (let i = 0; i < cells.length; i += 7) {
+      weeks.push(cells.slice(i, i + 7));
+    }
+
+    return {
+      year,
+      month,
+      weeks,
+    };
+  }, [currentDate]);
+
+  const monthName = new Intl.DateTimeFormat("en-US", {
+    month: "long",
+    year: "numeric",
+  }).format(currentDate);
+
+  const goPreviousMonth = () => {
+    setCurrentDate(
+      new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1),
+    );
+  };
+
+  const goNextMonth = () => {
+    setCurrentDate(
+      new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1),
+    );
+  };
+
+  const goToday = () => {
+    setCurrentDate(new Date());
+  };
+
   return (
     <div className="min-h-[385px] rounded-2xl border border-white/35 bg-white/[0.30] p-6 shadow-[0_18px_50px_rgba(15,23,42,0.10)] backdrop-blur-2xl">
       {/* Header */}
@@ -60,13 +102,29 @@ export default function CalendarCard() {
 
       {/* Month */}
       <div className="mt-6 flex items-center justify-between">
-        <button className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-white/30">
+        <button
+          type="button"
+          onClick={goPreviousMonth}
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-white/30"
+          aria-label="Previous month"
+        >
           <ChevronLeft />
         </button>
 
-        <span className="text-sm font-medium text-slate-700">October 2026</span>
+        <button
+          type="button"
+          onClick={goToday}
+          className="text-sm font-medium text-slate-700 transition hover:text-slate-900"
+        >
+          {monthName}
+        </button>
 
-        <button className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-white/30">
+        <button
+          type="button"
+          onClick={goNextMonth}
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-white/30"
+          aria-label="Next month"
+        >
           <ChevronRight />
         </button>
       </div>
@@ -82,10 +140,13 @@ export default function CalendarCard() {
 
       {/* Calendar */}
       <div className="mt-3 space-y-2">
-        {weeks.map((week, weekIndex) => (
+        {calendar.weeks.map((week, weekIndex) => (
           <div key={weekIndex} className="grid grid-cols-7 text-center">
             {week.map((item, index) => (
-              <div key={index} className="flex h-7 items-center justify-center">
+              <div
+                key={`${weekIndex}-${index}`}
+                className="flex h-7 items-center justify-center"
+              >
                 <span
                   className={`flex h-7 w-7 items-center justify-center rounded-full text-xs ${
                     item.selected
@@ -109,21 +170,22 @@ export default function CalendarCard() {
           <div>
             <p className="text-sm font-medium text-slate-700">Today</p>
 
-            <p className="mt-1 text-xs text-slate-400">3 tasks scheduled</p>
+            <p className="mt-1 text-xs text-slate-400">
+              {new Intl.DateTimeFormat("en-US", {
+                weekday: "long",
+                month: "short",
+                day: "numeric",
+              }).format(new Date())}
+            </p>
           </div>
 
-          {/* Avatars */}
           <div className="flex -space-x-2">
             <div className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white/70 bg-slate-800 text-[9px] text-white">
               V
             </div>
 
             <div className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white/70 bg-slate-500 text-[9px] text-white">
-              A
-            </div>
-
-            <div className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white/70 bg-slate-300 text-[9px] text-slate-700">
-              R
+              S
             </div>
           </div>
         </div>
@@ -146,6 +208,7 @@ function CalendarIcon() {
       className="text-slate-700"
     >
       <rect x="3" y="4" width="18" height="17" rx="3" />
+
       <path d="M16 2v4M8 2v4M3 10h18" />
     </svg>
   );

@@ -1,21 +1,61 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
 import LiveClock from "./LiveClock";
+import { apiFetch } from "../../lib/api";
+
+interface User {
+  _id: string;
+  username: string;
+  email: string;
+}
+
+interface MeResponse {
+  success: boolean;
+  user: User;
+}
 
 export default function DashboardHeader() {
   const [date, setDate] = useState("");
+  const [username, setUsername] = useState("Vinay");
 
   useEffect(() => {
-    setDate(
-      new Date().toLocaleDateString("en-US", {
-        weekday: "long",
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      }),
-    );
+    const updateDate = () => {
+      setDate(
+        new Date().toLocaleDateString("en-US", {
+          weekday: "long",
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        }),
+      );
+    };
+
+    const fetchUser = async () => {
+      try {
+        const data = await apiFetch<MeResponse>("/users/getme");
+
+        if (data.success && data.user) {
+          setUsername(data.user.username);
+        }
+      } catch (error) {
+        console.error("Failed to fetch user:", error);
+      }
+    };
+
+    updateDate();
+    fetchUser();
+
+    const interval = setInterval(updateDate, 60_000);
+
+    return () => clearInterval(interval);
   }, []);
+
+  const parts = date.split(",");
+
+  const firstName =
+    username.trim().split(" ")[0] || "Vinay";
 
   return (
     <header className="relative">
@@ -24,7 +64,7 @@ export default function DashboardHeader() {
         {/* Greeting */}
         <div>
           <h1 className="text-[24px] font-medium tracking-[-0.03em] text-white md:text-[26px]">
-            Good morning, Vinay <span className="inline-block">👋</span>
+            Good morning, {firstName} <span className="inline-block">👋</span>
           </h1>
 
           <p className="mt-2 text-[15px] text-white/80">
@@ -35,7 +75,11 @@ export default function DashboardHeader() {
         {/* User */}
         <div className="flex items-center gap-5">
           {/* Notification */}
-          <button className="relative flex h-10 w-10 items-center justify-center rounded-full text-white/80 transition hover:bg-white/10 hover:text-white">
+          <button
+            type="button"
+            className="relative flex h-10 w-10 items-center justify-center rounded-full text-white/80 transition hover:bg-white/10 hover:text-white"
+            aria-label="Notifications"
+          >
             <BellIcon />
 
             <span className="absolute right-[7px] top-[6px] h-2 w-2 rounded-full bg-red-400 ring-2 ring-white/20" />
@@ -45,12 +89,12 @@ export default function DashboardHeader() {
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 overflow-hidden rounded-full border border-white/30 bg-slate-800/50">
               <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-white">
-                V
+                {firstName.charAt(0).toUpperCase()}
               </div>
             </div>
 
             <span className="hidden text-sm font-medium text-white md:block">
-              Vinay
+              {firstName}
             </span>
 
             <ChevronDownIcon />
@@ -60,7 +104,6 @@ export default function DashboardHeader() {
 
       {/* Clock + date */}
       <div className="mt-3 grid items-center gap-6 md:grid-cols-[1fr_auto_1fr]">
-        {/* Empty left area */}
         <div />
 
         {/* Clock */}
@@ -69,9 +112,8 @@ export default function DashboardHeader() {
         </div>
 
         {/* Date card */}
-        <div className="flex justify-end">
+        <div className="relative -top-4 flex justify-end">
           <div className="relative h-[110px] w-[275px] overflow-hidden rounded-2xl border border-white/35 bg-white/15 p-6 shadow-[0_12px_40px_rgba(15,23,42,0.10)] backdrop-blur-xl">
-            {/* Small background */}
             <div
               className="absolute inset-0 bg-cover bg-center opacity-45"
               style={{
@@ -83,14 +125,12 @@ export default function DashboardHeader() {
 
             <div className="relative flex items-start justify-between">
               <div>
-                <p className="text-[20px] font-medium text-slate-800">
-                  {date ? date.split(",")[0] : "Sunday"}
+                <p className="text-[20px] font-medium text-white drop-shadow-sm">
+                  {parts[0] || "Today"}
                 </p>
 
-                <p className="mt-1 text-[15px] text-slate-600">
-                  {date
-                    ? date.split(",").slice(1).join(",").trim()
-                    : "4 October 2026"}
+                <p className="mt-1 text-[15px] font-medium text-white/90">
+                  {parts.slice(1).join(",").trim()}
                 </p>
               </div>
 
@@ -159,3 +199,4 @@ function CalendarIcon() {
     </svg>
   );
 }
+

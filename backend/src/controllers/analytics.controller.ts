@@ -56,16 +56,17 @@ export const getAnalytics = async function (req: Request, res: Response) {
 
     const { currentStreak, bestStreak } = calculateStreaks(allSessions);
 
-    return res.status(200).json({
-      success: true,
-      analytics: {
-        todayTime,
-        totalTime,
-        averageTime,
-        currentStreak,
-        bestStreak,
-      },
-    });
+return res.status(200).json({
+  success: true,
+  analytics: {
+    todayTime,
+    todaySessions: todaySessions.length,
+    totalTime,
+    averageTime,
+    currentStreak,
+    bestStreak,
+  },
+});
   } catch (error) {
     console.error("Anaytics error", error);
     return res.status(500).json({

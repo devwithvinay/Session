@@ -1,8 +1,55 @@
-const completed = 3;
-const total = 5;
-const progress = 60;
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { apiFetch } from "../../lib/api";
+
+interface Task {
+  _id: string;
+  title: string;
+  completed: boolean;
+  priority: "low" | "medium" | "high";
+  dueDate?: string;
+}
+
+interface TasksResponse {
+  success: boolean;
+  tasks: Task[];
+}
 
 export default function TaskProgress() {
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadTasks = async () => {
+      try {
+        const data = await apiFetch<TasksResponse>("/tasks");
+        setTasks(data.tasks ?? []);
+      } catch (error) {
+        console.error("Failed to load dashboard tasks:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadTasks();
+  }, []);
+
+  const { completed, total, progress, remaining } = useMemo(() => {
+    const totalTasks = tasks.length;
+    const completedTasks = tasks.filter((task) => task.completed).length;
+
+    const percentage =
+      totalTasks === 0 ? 0 : Math.round((completedTasks / totalTasks) * 100);
+
+    return {
+      completed: completedTasks,
+      total: totalTasks,
+      progress: percentage,
+      remaining: totalTasks - completedTasks,
+    };
+  }, [tasks]);
+
   const circumference = 2 * Math.PI * 48;
   const offset = circumference - (progress / 100) * circumference;
 
@@ -21,7 +68,6 @@ export default function TaskProgress() {
       <div className="mt-6 flex justify-center">
         <div className="relative h-[190px] w-[190px]">
           <svg className="h-full w-full -rotate-90" viewBox="0 0 120 120">
-            {/* Background */}
             <circle
               cx="60"
               cy="60"
@@ -31,7 +77,6 @@ export default function TaskProgress() {
               strokeWidth="9"
             />
 
-            {/* Progress */}
             <circle
               cx="60"
               cy="60"
@@ -47,7 +92,7 @@ export default function TaskProgress() {
 
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <span className="text-[34px] font-medium tracking-[-0.05em] text-slate-800">
-              {completed}/5
+              {loading ? "..." : `${completed}/${total}`}
             </span>
 
             <span className="mt-1 text-sm text-slate-400">Completed</span>
@@ -64,7 +109,9 @@ export default function TaskProgress() {
             <span className="text-sm text-slate-500">Completed</span>
           </div>
 
-          <span className="text-sm text-slate-500">3</span>
+          <span className="text-sm text-slate-500">
+            {loading ? "..." : completed}
+          </span>
         </div>
 
         <div className="flex items-center justify-between">
@@ -74,7 +121,9 @@ export default function TaskProgress() {
             <span className="text-sm text-slate-500">Remaining</span>
           </div>
 
-          <span className="text-sm text-slate-500">2</span>
+          <span className="text-sm text-slate-500">
+            {loading ? "..." : remaining}
+          </span>
         </div>
       </div>
 
@@ -82,14 +131,16 @@ export default function TaskProgress() {
       <div className="mt-6 flex items-center gap-4">
         <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-300/40">
           <div
-            className="h-full rounded-full bg-blue-500"
+            className="h-full rounded-full bg-blue-500 transition-all duration-500"
             style={{
               width: `${progress}%`,
             }}
           />
         </div>
 
-        <span className="text-sm text-slate-500">60%</span>
+        <span className="text-sm text-slate-500">
+          {loading ? "..." : `${progress}%`}
+        </span>
       </div>
     </div>
   );
