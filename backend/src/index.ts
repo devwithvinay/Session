@@ -9,6 +9,7 @@ import sessionRoutes from "./routes/session.route.js"
 import analyticsRoutes from "./routes/analytics.routes.js"
 import leaderBoardRoute from "./routes/leaderboard.route.js";
 import { errorHandler } from "./middleware/error.middleware.js";
+import taskRoutes from "./routes/task.routes.js";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 
@@ -56,6 +57,7 @@ app.use("/api/v1/users",userRoutes)
 app.use("/api/v1/session",sessionRoutes)
 app.use("/api/v1/analytics",analyticsRoutes)
 app.use("/api/v1/leaderboard",leaderBoardRoute)
+app.use("/api/v1/tasks", taskRoutes)
 
 // global error handle
 

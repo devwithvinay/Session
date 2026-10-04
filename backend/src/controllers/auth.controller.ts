@@ -57,13 +57,49 @@ export const registerUser = async function (req: Request, res: Response, next: N
       },
     });
 
-    const mailOption = {
-      from: process.env.MAILTRAP_SENDERMAIL, // sender address
-      to: user.email, // list of recipients
-      subject: "Please verify your email", // subject line
-      text: `Click on the following link for verification : 
-      ${process.env.BASE_URL}/api/v1/users/verify/${token}`, // plain text body
-    };
+   const verificationUrl = `${process.env.BACKEND_URL}/api/v1/users/verify/${token}`;
+
+   const mailOption = {
+     from: process.env.MAILTRAP_SENDERMAIL,
+     to: user.email,
+     subject: "Please verify your email",
+
+     text: `Please verify your email by clicking this link:
+${verificationUrl}`,
+
+     html: `
+    <div style="font-family: Arial, sans-serif; padding: 30px;">
+      <h2>Verify your email</h2>
+
+      <p>Thanks for creating your Session account.</p>
+
+      <p>Please click the button below to verify your email address:</p>
+
+      <a
+        href="${verificationUrl}"
+        style="
+          display: inline-block;
+          padding: 12px 20px;
+          background-color: #111827;
+          color: white;
+          text-decoration: none;
+          border-radius: 8px;
+          font-weight: 600;
+        "
+      >
+        Verify Email
+      </a>
+
+      <p style="margin-top: 20px; color: #666;">
+        If the button doesn't work, copy and paste this URL into your browser:
+      </p>
+
+      <p style="color: #666; word-break: break-all;">
+        ${verificationUrl}
+      </p>
+    </div>
+  `,
+   };
 
     //send the mail
     await transporter.sendMail(mailOption);
@@ -180,11 +216,12 @@ export const loginUser = async function (
 
       { expiresIn: "24h" },
     );
-    const cookieOption = {
-      httpOnly: true,
-      secure: true,
-      maxAge: 24 * 60 * 60 * 1000,
-    };
+   const cookieOption = {
+     httpOnly: true,
+     secure: process.env.NODE_ENV === "production",
+     sameSite: "lax" as const,
+     maxAge: 24 * 60 * 60 * 1000,
+   };
 
     res.cookie("token", token, cookieOption);
 

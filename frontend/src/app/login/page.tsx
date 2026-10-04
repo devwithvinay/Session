@@ -2,9 +2,41 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { apiFetch } from "@/lib/api";
 
 export default function LoginPage() {
+  const router = useRouter();
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+
+    setError("");
+    setLoading(true);
+
+    try {
+      await apiFetch("/users/login", {
+        method: "POST",
+        body: JSON.stringify({
+          email,
+          password,
+        }),
+      });
+
+      router.push("/app");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Login failed");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <main
@@ -21,15 +53,12 @@ export default function LoginPage() {
         backgroundPosition: "center",
       }}
     >
-      {/* Soft background blur */}
       <div className="pointer-events-none absolute inset-0 bg-black/[0.03]" />
 
-      {/* Subtle light glow */}
       <div className="pointer-events-none absolute left-[-120px] top-[-120px] h-[400px] w-[400px] rounded-full bg-white/20 blur-3xl" />
 
       <div className="pointer-events-none absolute bottom-[-150px] right-[-100px] h-[400px] w-[400px] rounded-full bg-sky-200/20 blur-3xl" />
 
-      {/* Main content */}
       <div className="relative z-10 w-full max-w-[430px]">
         {/* Brand */}
         <div className="mb-7 text-center">
@@ -45,15 +74,12 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* ================= GLASS CARD ================= */}
+        {/* Login card */}
         <div className="relative overflow-hidden rounded-[30px] border border-white/40 bg-white/[0.18] p-7 shadow-[0_25px_80px_rgba(0,0,0,0.25)] backdrop-blur-2xl sm:p-9">
-          {/* Top glass reflection */}
           <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/80" />
 
-          {/* Glass glow */}
           <div className="pointer-events-none absolute -right-24 -top-24 h-48 w-48 rounded-full bg-white/20 blur-3xl" />
 
-          {/* Content */}
           <div className="relative z-10">
             {/* Heading */}
             <div>
@@ -66,42 +92,42 @@ export default function LoginPage() {
               </p>
             </div>
 
-            {/* ================= GOOGLE ================= */}
+            {/* Google */}
             <button
               type="button"
               className="mt-7 flex h-12 w-full items-center justify-center gap-3 rounded-xl border border-white/30 bg-white/20 text-sm font-medium text-white backdrop-blur-md transition hover:bg-white/30"
             >
-              {/* Google Icon */}
               <svg
                 width="18"
                 height="18"
                 viewBox="0 0 24 24"
-                aria-hidden="true"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
               >
                 <path
+                  d="M21.805 12.23c0-.79-.064-1.55-.182-2.28H12v4.31h5.497a4.7 4.7 0 0 1-2.04 3.086v2.568h3.302c1.934-1.78 3.046-4.404 3.046-7.684Z"
                   fill="#4285F4"
-                  d="M21.35 12.23c0-.79-.07-1.55-.2-2.27H12v4.3h5.22a4.47 4.47 0 0 1-1.94 2.93v2.44h3.14c1.84-1.69 2.93-4.18 2.93-7.4Z"
                 />
 
                 <path
+                  d="M12 22c2.76 0 5.077-.913 6.77-2.486l-3.302-2.568c-.916.615-2.084.979-3.468.979-2.664 0-4.922-1.8-5.733-4.218H2.853v2.65A10.22 10.22 0 0 0 12 22Z"
                   fill="#34A853"
-                  d="M12 21.5c2.63 0 4.84-.87 6.45-2.35l-3.14-2.44c-.87.58-1.98.92-3.31.92-2.54 0-4.7-1.72-5.47-4.03H3.28v2.52A9.74 9.74 0 0 0 12 21.5Z"
                 />
 
                 <path
+                  d="M6.267 13.707A6.14 6.14 0 0 1 5.946 12c0-.592.11-1.168.321-1.707v-2.65H2.853A10.16 10.16 0 0 0 1.78 12c0 1.637.393 3.185 1.073 4.357l3.414-2.65Z"
                   fill="#FBBC05"
-                  d="M6.53 13.6A5.86 5.86 0 0 1 6.22 12c0-.56.1-1.1.31-1.6V7.88H3.28A9.73 9.73 0 0 0 2.25 12c0 1.57.38 3.05 1.03 4.12l3.25-2.52Z"
                 />
 
                 <path
+                  d="M12 6.075c1.5 0 2.847.516 3.91 1.527l2.932-2.932C17.072 2.993 14.76 2 12 2a10.22 10.22 0 0 0-9.147 5.643l3.414 2.65C7.078 7.875 9.336 6.075 12 6.075Z"
                   fill="#EA4335"
-                  d="M12 6.37c1.43 0 2.71.49 3.72 1.45l2.79-2.79C16.83 3.48 14.63 2.5 12 2.5a9.74 9.74 0 0 0-8.72 5.38l3.25 2.52C7.3 8.09 9.46 6.37 12 6.37Z"
                 />
               </svg>
               Continue with Google
             </button>
 
-            {/* ================= DIVIDER ================= */}
+            {/* Divider */}
             <div className="my-7 flex items-center gap-4">
               <div className="h-px flex-1 bg-white/20" />
 
@@ -112,8 +138,15 @@ export default function LoginPage() {
               <div className="h-px flex-1 bg-white/20" />
             </div>
 
-            {/* ================= FORM ================= */}
-            <form className="space-y-5">
+            {/* Error */}
+            {error && (
+              <div className="mb-5 rounded-xl border border-red-300/30 bg-red-500/15 px-4 py-3 text-sm text-white">
+                {error}
+              </div>
+            )}
+
+            {/* Form */}
+            <form onSubmit={handleLogin} className="space-y-5">
               {/* Email */}
               <div>
                 <label
@@ -126,7 +159,10 @@ export default function LoginPage() {
                 <input
                   id="email"
                   type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
+                  required
                   className="h-12 w-full rounded-xl border border-white/30 bg-white/20 px-4 text-sm text-white outline-none backdrop-blur-md transition placeholder:text-white/55 focus:border-white/60 focus:bg-white/25 focus:ring-4 focus:ring-white/10"
                 />
               </div>
@@ -153,7 +189,10 @@ export default function LoginPage() {
                   <input
                     id="password"
                     type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter your password"
+                    required
                     className="h-12 w-full rounded-xl border border-white/30 bg-white/20 px-4 pr-16 text-sm text-white outline-none backdrop-blur-md transition placeholder:text-white/55 focus:border-white/60 focus:bg-white/25 focus:ring-4 focus:ring-white/10"
                   />
 
@@ -167,18 +206,19 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              {/* ================= SIGN IN ================= */}
+              {/* Submit */}
               <button
                 type="submit"
-                className="h-12 w-full rounded-xl bg-white/90 text-sm font-semibold text-[#304856] shadow-[0_8px_25px_rgba(0,0,0,0.15)] transition hover:bg-white active:scale-[0.99]"
+                disabled={loading}
+                className="h-12 w-full rounded-xl bg-white/90 text-sm font-semibold text-[#304856] shadow-[0_8px_25px_rgba(0,0,0,0.15)] transition hover:bg-white active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Sign in
+                {loading ? "Signing in..." : "Sign in"}
               </button>
             </form>
 
-            {/* ================= REGISTER ================= */}
+            {/* Register */}
             <p className="mt-7 text-center text-sm text-white/70">
-              Don't have an account?{" "}
+              Don&apos;t have an account?{" "}
               <Link
                 href="/register"
                 className="font-semibold text-white transition hover:text-white/80"
@@ -189,9 +229,8 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Bottom text */}
         <p className="mt-6 text-center text-xs text-white/60">
-          By continuing, you agree to Session's Terms and Privacy Policy.
+          By continuing, you agree to Session&apos;s Terms and Privacy Policy.
         </p>
       </div>
     </main>
