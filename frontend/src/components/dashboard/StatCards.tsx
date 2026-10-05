@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { apiFetch } from "../../lib/api";
 
 interface Analytics {
@@ -17,24 +17,55 @@ interface AnalyticsResponse {
   analytics: Analytics;
 }
 
+interface DailyFocus {
+  date: string;
+  totalDuration: number;
+  sessions: number;
+}
+
+interface DailyFocusResponse {
+  success: boolean;
+  dailyFocus: DailyFocus[];
+}
+
 export default function StatCards() {
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
+  const [dailyFocus, setDailyFocus] = useState<DailyFocus[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const fetchAnalytics = useCallback(async () => {
+    try {
+      const [analyticsData, dailyData] = await Promise.all([
+        apiFetch<AnalyticsResponse>("/analytics"),
+        apiFetch<DailyFocusResponse>("/analytics/daily"),
+      ]);
+
+      setAnalytics(analyticsData.analytics);
+      setDailyFocus(dailyData.dailyFocus);
+    } catch (error) {
+      console.error("Failed to fetch analytics:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Initial analytics load
   useEffect(() => {
-    const fetchAnalytics = async () => {
-      try {
-        const data = await apiFetch<AnalyticsResponse>("/analytics");
-        setAnalytics(data.analytics);
-      } catch (error) {
-        console.error("Failed to fetch analytics:", error);
-      } finally {
-        setLoading(false);
-      }
+    fetchAnalytics();
+  }, [fetchAnalytics]);
+
+  // Refresh analytics when a focus session is completed
+  useEffect(() => {
+    const handleSessionCompleted = () => {
+      fetchAnalytics();
     };
 
-    fetchAnalytics();
-  }, []);
+    window.addEventListener("session-completed", handleSessionCompleted);
+
+    return () => {
+      window.removeEventListener("session-completed", handleSessionCompleted);
+    };
+  }, [fetchAnalytics]);
 
   const formatTime = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
@@ -47,11 +78,41 @@ export default function StatCards() {
     return `${minutes}m`;
   };
 
+  // Last 7 days, including today.
+  const last7Days = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date();
+
+    date.setHours(0, 0, 0, 0);
+    date.setDate(date.getDate() - (6 - index));
+
+    const dateString = date.toISOString().split("T")[0];
+
+    const existingDay = dailyFocus.find((day) => day.date === dateString);
+
+    return {
+      date: dateString,
+      totalDuration: existingDay?.totalDuration ?? 0,
+      sessions: existingDay?.sessions ?? 0,
+    };
+  });
+
+  const maxFocusTime = Math.max(
+    ...last7Days.map((day) => day.totalDuration),
+    1,
+  );
+
+  const maxSessions = Math.max(...last7Days.map((day) => day.sessions), 1);
+
   const focusTime = analytics ? formatTime(analytics.todayTime) : "0m";
 
   const sessions = analytics?.todaySessions ?? 0;
 
   const streak = analytics?.currentStreak ?? 0;
+
+  const todayFocusPercentage = Math.min(
+    (analytics?.todayTime ?? 0) / maxFocusTime,
+    1,
+  );
 
   return (
     <section className="grid gap-5 md:grid-cols-3">
@@ -74,7 +135,12 @@ export default function StatCards() {
         </div>
 
         <div className="mt-5 h-1.5 overflow-hidden rounded-full bg-slate-200/60">
-          <div className="h-full w-[68%] rounded-full bg-sky-500/70" />
+          <div
+            className="h-full rounded-full bg-sky-500/70 transition-all duration-500"
+            style={{
+              width: `${todayFocusPercentage * 100}%`,
+            }}
+          />
         </div>
       </div>
 
@@ -96,14 +162,25 @@ export default function StatCards() {
           </div>
         </div>
 
-        <div className="mt-5 flex items-end gap-1">
-          {[35, 55, 42, 70, 50, 82, 62].map((height, index) => (
-            <div
-              key={index}
-              className="flex-1 rounded-full bg-violet-400/50"
-              style={{ height: `${height / 2}px` }}
-            />
-          ))}
+        {/* Real 7-day session activity */}
+        <div className="mt-5 flex h-8 items-end gap-1">
+          {last7Days.map((day) => {
+            const height =
+              day.sessions === 0
+                ? 4
+                : Math.max((day.sessions / maxSessions) * 32, 6);
+
+            return (
+              <div key={day.date} className="flex flex-1 items-end">
+                <div
+                  className="w-full rounded-full bg-violet-400/50 transition-all duration-500"
+                  style={{
+                    height: `${height}px`,
+                  }}
+                />
+              </div>
+            );
+          })}
         </div>
       </div>
 

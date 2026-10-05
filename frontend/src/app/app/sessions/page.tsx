@@ -1,13 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { apiFetch } from "../../../lib/api";
+
+type SessionMode = "focus" | "short" | "long";
 
 interface Session {
   _id: string;
   startTime: string;
   endTime?: string;
   duration: number;
+  targetDuration?: number;
+  mode?: SessionMode;
   status: "active" | "paused" | "completed" | "cancelled";
 }
 
@@ -27,38 +31,63 @@ export default function SessionsPage() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
+  const loadSessions = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const response = await apiFetch<SessionHistoryResponse>(
+        `/session/history?page=${page}&limit=10`,
+      );
+
+      setSessions(response.sessions ?? []);
+      setTotalPages(response.pagination?.totalPages || 1);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Unable to load session history",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [page]);
+
   useEffect(() => {
-    const loadSessions = async () => {
-      try {
-        setLoading(true);
-        setError("");
+    loadSessions();
+  }, [loadSessions]);
 
-        const response = await apiFetch<SessionHistoryResponse>(
-          `/session/history?page=${page}&limit=10`,
-        );
+  useEffect(() => {
+    const handleSessionCompleted = () => {
+      loadSessions();
+    };
 
-        setSessions(response.sessions);
-        setTotalPages(response.pagination.totalPages || 1);
-      } catch (err) {
-        setError(
-          err instanceof Error ? err.message : "Unable to load session history",
-        );
-      } finally {
-        setLoading(false);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        loadSessions();
       }
     };
 
-    loadSessions();
-  }, [page]);
+    window.addEventListener("session-completed", handleSessionCompleted);
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("session-completed", handleSessionCompleted);
+
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [loadSessions]);
 
   const formatDuration = (seconds: number) => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
+    const safeSeconds = Math.max(0, Number(seconds) || 0);
+
+    const hours = Math.floor(safeSeconds / 3600);
+
+    const minutes = Math.floor((safeSeconds % 3600) / 60);
+
+    const secs = safeSeconds % 60;
 
     if (hours > 0) {
       return `${hours}h ${minutes}m`;
@@ -76,6 +105,7 @@ export default function SessionsPage() {
       day: "2-digit",
       month: "short",
       year: "numeric",
+      timeZone: "Asia/Kolkata",
     });
   };
 
@@ -83,7 +113,20 @@ export default function SessionsPage() {
     return new Date(date).toLocaleTimeString("en-IN", {
       hour: "2-digit",
       minute: "2-digit",
+      timeZone: "Asia/Kolkata",
     });
+  };
+
+  const getSessionLabel = (mode?: SessionMode) => {
+    if (mode === "short") {
+      return "Short Break";
+    }
+
+    if (mode === "long") {
+      return "Long Break";
+    }
+
+    return "Focus Session";
   };
 
   return (
@@ -111,10 +154,18 @@ export default function SessionsPage() {
           )}
 
           {!loading && error && (
-            <div className="flex min-h-[300px] items-center justify-center">
+            <div className="flex min-h-[300px] flex-col items-center justify-center gap-4">
               <p className="rounded-xl border border-red-400/20 bg-red-400/10 px-4 py-3 text-sm text-red-200">
                 {error}
               </p>
+
+              <button
+                type="button"
+                onClick={loadSessions}
+                className="rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-sm text-white/60 transition hover:bg-white/10 hover:text-white"
+              >
+                Try again
+              </button>
             </div>
           )}
 
@@ -148,7 +199,9 @@ export default function SessionsPage() {
                     className="grid gap-4 border-b border-white/[0.07] px-6 py-5 last:border-b-0 md:grid-cols-[1.4fr_1fr_1fr_0.8fr] md:items-center"
                   >
                     <div>
-                      <p className="font-medium text-white/90">Focus Session</p>
+                      <p className="font-medium text-white/90">
+                        {getSessionLabel(session.mode)}
+                      </p>
 
                       <p className="mt-1 text-xs text-white/35">
                         {formatDate(session.startTime)}
@@ -181,6 +234,7 @@ export default function SessionsPage() {
 
                 <div className="flex gap-2">
                   <button
+                    type="button"
                     onClick={() =>
                       setPage((current) => Math.max(1, current - 1))
                     }
@@ -191,6 +245,7 @@ export default function SessionsPage() {
                   </button>
 
                   <button
+                    type="button"
                     onClick={() =>
                       setPage((current) => Math.min(totalPages, current + 1))
                     }
@@ -210,7 +265,7 @@ export default function SessionsPage() {
 }
 
 function StatusBadge({ status }: { status: Session["status"] }) {
-  const styles = {
+  const styles: Record<Session["status"], string> = {
     completed: "border-emerald-300/20 bg-emerald-300/10 text-emerald-200",
     cancelled: "border-red-300/20 bg-red-300/10 text-red-200",
     active: "border-sky-300/20 bg-sky-300/10 text-sky-200",
@@ -219,9 +274,7 @@ function StatusBadge({ status }: { status: Session["status"] }) {
 
   return (
     <span
-      className={`inline-flex rounded-full border px-3 py-1 text-xs capitalize ${
-        styles[status]
-      }`}
+      className={`inline-flex rounded-full border px-3 py-1 text-xs capitalize ${styles[status]}`}
     >
       {status}
     </span>

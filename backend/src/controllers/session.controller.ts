@@ -1,6 +1,73 @@
 import type { NextFunction, Request, Response } from "express";
-
 import FocusSession from "../model/FocusSession.js";
+
+const DEFAULT_FOCUS_DURATION = 25 * 60;
+const MIN_SESSION_DURATION = 5 * 60;
+const MAX_SESSION_DURATION = 120 * 60;
+
+type SessionMode = "focus" | "short" | "long";
+
+const getSessionMode = (value: unknown): SessionMode => {
+  if (value === "short" || value === "long") {
+    return value;
+  }
+
+  return "focus";
+};
+
+const getTargetDuration = (value: unknown, mode: SessionMode): number => {
+  const parsedDuration = Number(value);
+
+  if (Number.isFinite(parsedDuration) && parsedDuration > 0) {
+    return Math.min(
+      MAX_SESSION_DURATION,
+      Math.max(MIN_SESSION_DURATION, Math.floor(parsedDuration)),
+    );
+  }
+
+  if (mode === "short") {
+    return 5 * 60;
+  }
+
+  if (mode === "long") {
+    return 15 * 60;
+  }
+
+  return DEFAULT_FOCUS_DURATION;
+};
+
+/*
+ * Legacy session compatibility
+ *
+ * Old sessions may not have:
+ * - mode
+ * - targetDuration
+ *
+ * Before saving an old session, we fill those values.
+ */
+const normalizeSession = (session: {
+  mode?: SessionMode;
+  targetDuration?: number;
+}) => {
+  const mode = getSessionMode(session.mode);
+
+  const targetDuration =
+    Number(session.targetDuration) > 0
+      ? Number(session.targetDuration)
+      : mode === "short"
+        ? 5 * 60
+        : mode === "long"
+          ? 15 * 60
+          : DEFAULT_FOCUS_DURATION;
+
+  session.mode = mode;
+  session.targetDuration = targetDuration;
+
+  return {
+    mode,
+    targetDuration,
+  };
+};
 
 export const startSession = async function (
   req: Request,
@@ -17,21 +84,62 @@ export const startSession = async function (
       });
     }
 
-    // User cannot start another session
-    // while one is active or paused.
+    const mode = getSessionMode(req.body?.mode);
+
+    const targetDuration = getTargetDuration(req.body?.targetDuration, mode);
+
     const existingSession = await FocusSession.findOne({
       user: userId,
       status: {
         $in: ["active", "paused"],
       },
+    }).sort({
+      createdAt: -1,
     });
 
     if (existingSession) {
-      return res.status(400).json({
-        message: "User already has an active session",
-        success: false,
-        session: existingSession,
-      });
+      /*
+       * Normalize legacy sessions BEFORE saving.
+       */
+      const normalized = normalizeSession(existingSession);
+
+      let elapsedSeconds = Number(existingSession.duration || 0);
+
+      if (existingSession.status === "active") {
+        const now = new Date();
+
+        const activeSeconds = Math.floor(
+          (now.getTime() - existingSession.activeStartTime.getTime()) / 1000,
+        );
+
+        elapsedSeconds += Math.max(0, activeSeconds);
+      }
+
+      if (elapsedSeconds >= normalized.targetDuration) {
+        existingSession.duration = normalized.targetDuration;
+
+        existingSession.endTime = new Date();
+        existingSession.status = "completed";
+
+        await existingSession.save();
+      } else {
+        /*
+         * Save the normalized legacy fields even
+         * when the session is still active.
+         */
+        if (
+          existingSession.isModified("mode") ||
+          existingSession.isModified("targetDuration")
+        ) {
+          await existingSession.save();
+        }
+
+        return res.status(400).json({
+          message: "User already has an active session",
+          success: false,
+          session: existingSession,
+        });
+      }
     }
 
     const now = new Date();
@@ -40,12 +148,14 @@ export const startSession = async function (
       user: userId,
       startTime: now,
       activeStartTime: now,
+      mode,
+      targetDuration,
       duration: 0,
       status: "active",
     });
 
     return res.status(200).json({
-      message: "Focus session started",
+      message: "Session started",
       success: true,
       session,
     });
@@ -90,14 +200,20 @@ export const pauseSession = async function (
       });
     }
 
+    /*
+     * Fix legacy sessions before saving.
+     */
+    const { targetDuration } = normalizeSession(session);
+
     const now = new Date();
 
-    // Add current active period to total duration
     const activeSeconds = Math.floor(
       (now.getTime() - session.activeStartTime.getTime()) / 1000,
     );
 
-    session.duration += activeSeconds;
+    session.duration += Math.max(0, activeSeconds);
+
+    session.duration = Math.min(session.duration, targetDuration);
 
     session.pausedAt = now;
     session.status = "paused";
@@ -105,7 +221,7 @@ export const pauseSession = async function (
     await session.save();
 
     return res.status(200).json({
-      message: "Focus session paused",
+      message: "Session paused",
       success: true,
       session,
     });
@@ -150,15 +266,32 @@ export const resumeSession = async function (
       });
     }
 
-    const now = new Date();
+    /*
+     * Fix legacy sessions before saving.
+     */
+    const { targetDuration } = normalizeSession(session);
 
-    session.activeStartTime = now;
+    if (Number(session.duration || 0) >= targetDuration) {
+      session.duration = targetDuration;
+      session.endTime = new Date();
+      session.status = "completed";
+
+      await session.save();
+
+      return res.status(400).json({
+        message: "Session duration is already complete",
+        success: false,
+        session,
+      });
+    }
+
+    session.activeStartTime = new Date();
     session.status = "active";
 
     await session.save();
 
     return res.status(200).json({
-      message: "Focus session resumed",
+      message: "Session resumed",
       success: true,
       session,
     });
@@ -205,16 +338,22 @@ export const completeSession = async function (
       });
     }
 
+    /*
+     * Fix legacy sessions before saving.
+     */
+    const { targetDuration } = normalizeSession(session);
+
     const endTime = new Date();
 
-    // If currently active, add the final active period.
     if (session.status === "active") {
       const activeSeconds = Math.floor(
         (endTime.getTime() - session.activeStartTime.getTime()) / 1000,
       );
 
-      session.duration += activeSeconds;
+      session.duration += Math.max(0, activeSeconds);
     }
+
+    session.duration = Math.min(Number(session.duration || 0), targetDuration);
 
     session.endTime = endTime;
     session.status = "completed";
@@ -222,7 +361,7 @@ export const completeSession = async function (
     await session.save();
 
     return res.status(200).json({
-      message: "Focus session completed",
+      message: "Session completed",
       success: true,
       session,
     });
@@ -236,10 +375,10 @@ export const cancelSession = async function (
   res: Response,
   next: NextFunction,
 ) {
-  try {
-    const userId = req.user?.id;
-    const { sessionId } = req.params;
+  const userId = req.user?.id;
+  const { sessionId } = req.params;
 
+  try {
     if (!userId) {
       return res.status(401).json({
         message: "Unauthorized",
@@ -263,30 +402,36 @@ export const cancelSession = async function (
     });
 
     if (!session) {
-      return res.status(400).json({
+      return res.status(404).json({
         message: "Active or paused session not found",
         success: false,
       });
     }
 
-    const endTime = new Date();
+    /*
+     * Fix legacy sessions before saving.
+     */
+    const { targetDuration } = normalizeSession(session);
 
-    // If active, save the final active seconds.
+    const now = new Date();
+
     if (session.status === "active") {
-      const activeSeconds = Math.floor(
-        (endTime.getTime() - session.activeStartTime.getTime()) / 1000,
+      const elapsedSeconds = Math.floor(
+        (now.getTime() - session.activeStartTime.getTime()) / 1000,
       );
 
-      session.duration += activeSeconds;
+      session.duration += Math.max(0, elapsedSeconds);
     }
 
-    session.endTime = endTime;
+    session.duration = Math.min(Number(session.duration || 0), targetDuration);
+
+    session.endTime = now;
     session.status = "cancelled";
 
     await session.save();
 
     return res.status(200).json({
-      message: "Focus session cancelled",
+      message: "Session cancelled",
       success: true,
       session,
     });
@@ -319,6 +464,15 @@ export const getSession = async function (
       createdAt: -1,
     });
 
+    /*
+     * If a legacy active/paused session exists,
+     * normalize it in memory so the frontend receives
+     * the required values.
+     */
+    if (session) {
+      normalizeSession(session);
+    }
+
     return res.status(200).json({
       message: "Fetching successfully",
       success: true,
@@ -344,8 +498,9 @@ export const getSessionHistory = async function (
       });
     }
 
-    const page = Number(req.query.page) || 1;
-    const limit = Number(req.query.limit) || 20;
+    const page = Math.max(1, Number(req.query.page) || 1);
+
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
 
     const skip = (page - 1) * limit;
 

@@ -1,6 +1,12 @@
+
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import {
+  FormEvent,
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
 import { apiFetch } from "../../lib/api";
 
 interface Task {
@@ -30,40 +36,92 @@ interface UpdateTaskResponse {
 export default function TodayTasks() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
-  const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [updatingId, setUpdatingId] =
+    useState<string | null>(null);
 
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [creating, setCreating] = useState(false);
+  const [showAddForm, setShowAddForm] =
+    useState(false);
+
+  const [creating, setCreating] =
+    useState(false);
 
   const [title, setTitle] = useState("");
-  const [priority, setPriority] = useState<"low" | "medium" | "high">("medium");
-  const [dueDate, setDueDate] = useState(getTodayDate());
+
+  const [priority, setPriority] = useState<
+    "low" | "medium" | "high"
+  >("medium");
+
+  const [dueDate, setDueDate] =
+    useState(getTodayDate());
 
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    fetchTasks();
-  }, []);
-
-  async function fetchTasks() {
+  /*
+   * Fetch today's tasks from backend.
+   *
+   * IMPORTANT:
+   * We always get the latest data from the server
+   * instead of manually modifying the local task list.
+   */
+  const fetchTasks = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
 
-      const data = await apiFetch<TasksResponse>("/tasks");
+      const data =
+        await apiFetch<TasksResponse>("/tasks");
 
-      const todayTasks = data.tasks.filter((task) => isToday(task.dueDate));
+      const todayTasks = data.tasks.filter(
+        (task) => isToday(task.dueDate),
+      );
 
       setTasks(todayTasks);
     } catch (error) {
-      console.error("Failed to fetch tasks:", error);
+      console.error(
+        "Failed to fetch tasks:",
+        error,
+      );
+
       setError("Failed to load tasks");
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
-  async function handleCreateTask(event: FormEvent<HTMLFormElement>) {
+  /*
+   * Initial load
+   */
+  useEffect(() => {
+    fetchTasks();
+  }, [fetchTasks]);
+
+  /*
+   * Listen for task changes from other components.
+   */
+  useEffect(() => {
+    const handleTaskUpdated = () => {
+      fetchTasks();
+    };
+
+    window.addEventListener(
+      "task-updated",
+      handleTaskUpdated,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "task-updated",
+        handleTaskUpdated,
+      );
+    };
+  }, [fetchTasks]);
+
+  /*
+   * Create task
+   */
+  async function handleCreateTask(
+    event: FormEvent<HTMLFormElement>,
+  ) {
     event.preventDefault();
 
     const trimmedTitle = title.trim();
@@ -77,55 +135,113 @@ export default function TodayTasks() {
       setCreating(true);
       setError("");
 
-      const data = await apiFetch<CreateTaskResponse>("/tasks", {
-        method: "POST",
-        body: JSON.stringify({
-          title: trimmedTitle,
-          priority,
-          dueDate,
-        }),
-      });
+      const data =
+        await apiFetch<CreateTaskResponse>(
+          "/tasks",
+          {
+            method: "POST",
+            body: JSON.stringify({
+              title: trimmedTitle,
+              priority,
+              dueDate,
+            }),
+          },
+        );
 
-      if (data.success) {
-        setTasks((current) => [...current, data.task]);
-
-        setTitle("");
-        setPriority("medium");
-        setDueDate(getTodayDate());
-        setShowAddForm(false);
+      if (!data.success || !data.task) {
+        throw new Error(
+          "Task could not be created",
+        );
       }
+
+      /*
+       * Do NOT append data.task manually.
+       *
+       * Re-fetch the backend so Dashboard displays
+       * exactly what the server saved.
+       */
+      await fetchTasks();
+
+      setTitle("");
+      setPriority("medium");
+      setDueDate(getTodayDate());
+      setShowAddForm(false);
+
+      /*
+       * Tell Focus and other components
+       * that the task list changed.
+       */
+      window.dispatchEvent(
+        new Event("task-updated"),
+      );
     } catch (error) {
-      console.error("Failed to create task:", error);
+      console.error(
+        "Failed to create task:",
+        error,
+      );
 
       setError(
-        error instanceof Error ? error.message : "Failed to create task",
+        error instanceof Error
+          ? error.message
+          : "Failed to create task",
       );
     } finally {
       setCreating(false);
     }
   }
 
+  /*
+   * Toggle task
+   */
   async function toggleTask(task: Task) {
     try {
       setUpdatingId(task._id);
       setError("");
 
-      const data = await apiFetch<UpdateTaskResponse>(`/tasks/${task._id}`, {
-        method: "PATCH",
-        body: JSON.stringify({
-          completed: !task.completed,
-        }),
-      });
+      const data =
+        await apiFetch<UpdateTaskResponse>(
+          `/tasks/${task._id}`,
+          {
+            method: "PATCH",
+            body: JSON.stringify({
+              completed: !task.completed,
+            }),
+          },
+        );
 
-      if (data.success) {
-        setTasks((current) =>
-          current.map((item) => (item._id === task._id ? data.task : item)),
+      if (!data.success || !data.task) {
+        throw new Error(
+          "Task could not be updated",
         );
       }
-    } catch (error) {
-      console.error("Failed to update task:", error);
 
-      setError("Failed to update task");
+      /*
+       * Re-fetch instead of manually changing
+       * local state.
+       *
+       * This is important because once a task is
+       * completed, it may disappear from today's
+       * active task list.
+       */
+      await fetchTasks();
+
+      /*
+       * Notify Focus and other components.
+       */
+      window.dispatchEvent(
+        new Event("task-updated"),
+      );
+    } catch (error) {
+      console.error(
+        "Failed to update task:",
+        error,
+      );
+
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to update task",
+      );
     } finally {
       setUpdatingId(null);
     }
@@ -141,6 +257,7 @@ export default function TodayTasks() {
 
   return (
     <div className="min-h-[385px] rounded-2xl border border-white/35 bg-white/[0.30] p-6 shadow-[0_18px_50px_rgba(15,23,42,0.10)] backdrop-blur-2xl">
+
       {/* Header */}
       <div className="flex items-center justify-between border-b border-slate-400/15 pb-5">
         <div className="flex items-center gap-3">
@@ -154,7 +271,9 @@ export default function TodayTasks() {
         </div>
 
         <div className="flex items-center gap-4">
-          <span className="text-sm text-slate-500">{formatToday()}</span>
+          <span className="text-sm text-slate-500">
+            {formatToday()}
+          </span>
 
           <button
             type="button"
@@ -175,26 +294,30 @@ export default function TodayTasks() {
       {/* Loading */}
       {loading && (
         <div className="flex min-h-[210px] items-center justify-center">
-          <p className="text-sm text-slate-500">Loading tasks...</p>
+          <p className="text-sm text-slate-500">
+            Loading tasks...
+          </p>
         </div>
       )}
 
       {/* Empty state */}
-      {!loading && tasks.length === 0 && !showAddForm && (
-        <div className="flex min-h-[210px] flex-col items-center justify-center text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/40 text-slate-500">
-            <TaskIcon />
+      {!loading &&
+        tasks.length === 0 &&
+        !showAddForm && (
+          <div className="flex min-h-[210px] flex-col items-center justify-center text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/40 text-slate-500">
+              <TaskIcon />
+            </div>
+
+            <p className="mt-4 text-sm font-medium text-slate-700">
+              No tasks for today
+            </p>
+
+            <p className="mt-1 text-xs text-slate-400">
+              Add a task to get started.
+            </p>
           </div>
-
-          <p className="mt-4 text-sm font-medium text-slate-700">
-            No tasks for today
-          </p>
-
-          <p className="mt-1 text-xs text-slate-400">
-            Add a task to get started.
-          </p>
-        </div>
-      )}
+        )}
 
       {/* Task list */}
       {!loading && tasks.length > 0 && (
@@ -207,8 +330,12 @@ export default function TodayTasks() {
               {/* Checkbox */}
               <button
                 type="button"
-                disabled={updatingId === task._id}
-                onClick={() => toggleTask(task)}
+                disabled={
+                  updatingId === task._id
+                }
+                onClick={() =>
+                  toggleTask(task)
+                }
                 aria-label={
                   task.completed
                     ? `Mark ${task.title} as incomplete`
@@ -218,7 +345,11 @@ export default function TodayTasks() {
                   task.completed
                     ? "border-white bg-white text-slate-900 shadow-sm"
                     : "border-white/30 bg-white/[0.04] hover:border-white/60 hover:bg-white/[0.08]"
-                } ${updatingId === task._id ? "cursor-wait opacity-60" : ""}`}
+                } ${
+                  updatingId === task._id
+                    ? "cursor-wait opacity-60"
+                    : ""
+                }`}
               >
                 {task.completed && (
                   <svg
@@ -275,6 +406,7 @@ export default function TodayTasks() {
           className="mt-4 rounded-xl border border-white/30 bg-white/25 p-4 backdrop-blur-xl"
         >
           <div className="space-y-3">
+
             {/* Title */}
             <div>
               <label
@@ -288,7 +420,11 @@ export default function TodayTasks() {
                 id="task-title"
                 type="text"
                 value={title}
-                onChange={(event) => setTitle(event.target.value)}
+                onChange={(event) =>
+                  setTitle(
+                    event.target.value,
+                  )
+                }
                 placeholder="What do you need to do?"
                 autoFocus
                 maxLength={200}
@@ -310,13 +446,27 @@ export default function TodayTasks() {
                   id="task-priority"
                   value={priority}
                   onChange={(event) =>
-                    setPriority(event.target.value as "low" | "medium" | "high")
+                    setPriority(
+                      event.target
+                        .value as
+                        | "low"
+                        | "medium"
+                        | "high",
+                    )
                   }
                   className="w-full rounded-lg border border-white/40 bg-white/40 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-slate-400/60"
                 >
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
+                  <option value="low">
+                    Low
+                  </option>
+
+                  <option value="medium">
+                    Medium
+                  </option>
+
+                  <option value="high">
+                    High
+                  </option>
                 </select>
               </div>
 
@@ -332,7 +482,11 @@ export default function TodayTasks() {
                   id="task-date"
                   type="date"
                   value={dueDate}
-                  onChange={(event) => setDueDate(event.target.value)}
+                  onChange={(event) =>
+                    setDueDate(
+                      event.target.value,
+                    )
+                  }
                   className="w-full rounded-lg border border-white/40 bg-white/40 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-slate-400/60"
                 />
               </div>
@@ -351,10 +505,15 @@ export default function TodayTasks() {
 
               <button
                 type="submit"
-                disabled={creating || !title.trim()}
+                disabled={
+                  creating ||
+                  !title.trim()
+                }
                 className="rounded-lg bg-slate-800 px-4 py-2 text-xs font-medium text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {creating ? "Adding..." : "Add Task"}
+                {creating
+                  ? "Adding..."
+                  : "Add Task"}
               </button>
             </div>
           </div>
@@ -374,6 +533,7 @@ export default function TodayTasks() {
           <span className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-200/60 text-lg">
             +
           </span>
+
           Add new task
         </button>
       )}
@@ -386,43 +546,70 @@ export default function TodayTasks() {
 function getTodayDate() {
   const today = new Date();
 
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, "0");
-  const day = String(today.getDate()).padStart(2, "0");
+  const year =
+    today.getFullYear();
+
+  const month = String(
+    today.getMonth() + 1,
+  ).padStart(2, "0");
+
+  const day = String(
+    today.getDate(),
+  ).padStart(2, "0");
 
   return `${year}-${month}-${day}`;
 }
 
 function isToday(date?: string) {
-  if (!date) return false;
+  if (!date) {
+    return false;
+  }
 
-  const taskDate = new Date(date);
-  const today = new Date();
+  /*
+   * For YYYY-MM-DD values, compare the
+   * calendar date directly instead of using
+   * new Date("YYYY-MM-DD"), which can introduce
+   * timezone-related problems.
+   */
+  const normalizedDate =
+    date.length >= 10
+      ? date.slice(0, 10)
+      : date;
 
   return (
-    taskDate.getFullYear() === today.getFullYear() &&
-    taskDate.getMonth() === today.getMonth() &&
-    taskDate.getDate() === today.getDate()
+    normalizedDate ===
+    getTodayDate()
   );
 }
 
 function formatToday() {
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  }).format(new Date());
+  return new Intl.DateTimeFormat(
+    "en-GB",
+    {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    },
+  ).format(new Date());
 }
 
 function capitalize(value: string) {
-  return value.charAt(0).toUpperCase() + value.slice(1);
+  return (
+    value.charAt(0).toUpperCase() +
+    value.slice(1)
+  );
 }
 
 /* ---------------- ICONS ---------------- */
 
 function TaskIcon() {
   return (
-    <svg width="23" height="23" viewBox="0 0 24 24" fill="none">
+    <svg
+      width="23"
+      height="23"
+      viewBox="0 0 24 24"
+      fill="none"
+    >
       <rect
         x="4"
         y="4"
@@ -446,7 +633,12 @@ function TaskIcon() {
 
 function MiniCalendarIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+    >
       <rect
         x="3"
         y="4"
@@ -469,10 +661,29 @@ function MiniCalendarIcon() {
 
 function MoreIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-      <circle cx="5" cy="12" r="1.5" />
-      <circle cx="12" cy="12" r="1.5" />
-      <circle cx="19" cy="12" r="1.5" />
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+    >
+      <circle
+        cx="5"
+        cy="12"
+        r="1.5"
+      />
+
+      <circle
+        cx="12"
+        cy="12"
+        r="1.5"
+      />
+
+      <circle
+        cx="19"
+        cy="12"
+        r="1.5"
+      />
     </svg>
   );
 }
