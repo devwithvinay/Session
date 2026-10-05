@@ -1,9 +1,11 @@
 import type { NextFunction, Request, Response } from "express";
+
 import User from "../model/User.model.js";
 import crypto from "crypto";
 import nodemailer from "nodemailer";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+
 import { AppError } from "../utils/AppError.js";
 
 /* =========================================================
@@ -92,6 +94,7 @@ export const registerUser = async function (
       from: senderEmail,
       to: user.email,
       subject: "Please verify your email",
+
       text: `Please verify your email by clicking this link:
 
 ${verificationUrl}`,
@@ -100,7 +103,9 @@ ${verificationUrl}`,
         <div style="font-family: Arial, sans-serif; padding: 30px;">
           <h2>Verify your email</h2>
 
-          <p>Thanks for creating your Session account.</p>
+          <p>
+            Thanks for creating your Session account.
+          </p>
 
           <p>
             Please click the button below to verify your email address:
@@ -159,22 +164,40 @@ export const verifyUser = async function (
       throw new AppError("Invalid verification token.", 400);
     }
 
+    /*
+     * verificationToken and tokenExpiry use select:false
+     * in User.model.ts, so explicitly select them here.
+     */
     const user = await User.findOne({
       verificationToken: token,
       tokenExpiry: {
         $gt: new Date(),
       },
-    });
+    }).select("+verificationToken +tokenExpiry");
 
     if (!user) {
       throw new AppError("Invalid or expired verification token.", 400);
     }
 
     user.isVerified = true;
+
+    /*
+     * exactOptionalPropertyTypes is enabled,
+     * therefore we use empty values instead of undefined.
+     */
     user.verificationToken = "";
     user.tokenExpiry = new Date(0);
 
     await user.save();
+
+    /*
+     * Redirect to frontend login page after verification.
+     */
+    const frontendUrl = process.env.BASE_URL;
+
+    if (frontendUrl) {
+      return res.redirect(`${frontendUrl}/login?verified=true`);
+    }
 
     return res.status(200).json({
       message: "User verification successful.",
@@ -203,9 +226,13 @@ export const loginUser = async function (
 
     const normalizedEmail = email.trim().toLowerCase();
 
+    /*
+     * password has select:false in User.model.ts.
+     * Explicitly select it for password comparison.
+     */
     const user = await User.findOne({
       email: normalizedEmail,
-    });
+    }).select("+password");
 
     if (!user) {
       throw new AppError("Invalid email or password.", 401);
@@ -242,9 +269,13 @@ export const loginUser = async function (
 
     const cookieOption = {
       httpOnly: true,
+
       secure: process.env.NODE_ENV === "production",
+
       sameSite: "lax" as const,
+
       maxAge: 24 * 60 * 60 * 1000,
+
       path: "/",
     };
 
@@ -316,6 +347,7 @@ export const updateUsername = async function (
     return res.status(200).json({
       message: "Username updated successfully.",
       success: true,
+
       user: {
         _id: user._id,
         username: user.username,
@@ -339,8 +371,11 @@ export const logout = async function (
   try {
     res.clearCookie("token", {
       httpOnly: true,
+
       secure: process.env.NODE_ENV === "production",
+
       sameSite: "lax",
+
       path: "/",
     });
 
@@ -376,10 +411,8 @@ export const forgotPassword = async function (
     });
 
     /*
-      Do not reveal whether an email exists.
-      This prevents user/email enumeration.
-    */
-
+     * Never reveal whether an email exists.
+     */
     if (!user) {
       return res.status(200).json({
         message:
@@ -402,11 +435,6 @@ export const forgotPassword = async function (
       throw new AppError("Frontend URL is not configured.", 500);
     }
 
-    /*
-      This should point to your frontend reset-password page.
-      Adjust the path if your actual page has a different route.
-    */
-
     const resetUrl = `${frontendUrl}/reset-password/${resetToken}`;
 
     const transporter = createMailTransporter();
@@ -421,6 +449,7 @@ export const forgotPassword = async function (
       from: senderEmail,
       to: user.email,
       subject: "Reset your Session password",
+
       text: `Click the following link to reset your password:
 
 ${resetUrl}
@@ -485,12 +514,16 @@ export const resetpassword = async function (
       throw new AppError("Invalid or expired reset token.", 400);
     }
 
+    /*
+     * resetPasswordToken and resetTokenExpires
+     * use select:false in User.model.ts.
+     */
     const user = await User.findOne({
       resetPasswordToken: resetToken,
       resetTokenExpires: {
         $gt: new Date(),
       },
-    });
+    }).select("+resetPasswordToken +resetTokenExpires");
 
     if (!user) {
       throw new AppError("Invalid or expired reset token.", 400);
@@ -506,10 +539,16 @@ export const resetpassword = async function (
       throw new AppError("Passwords do not match.", 400);
     }
 
+    /*
+     * User model pre-save hook hashes the password.
+     */
     user.password = password;
 
+    /*
+     * exactOptionalPropertyTypes is enabled,
+     * so use empty values instead of undefined.
+     */
     user.resetPasswordToken = "";
-
     user.resetTokenExpires = new Date(0);
 
     await user.save();
