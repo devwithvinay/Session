@@ -22,7 +22,7 @@ const app = express();
 app.use(helmet());
 
 
-const port = process.env.PORT || 8080
+const port = Number(process.env.PORT) || 8080
 
 app.use(express.json())
 app.use(express.urlencoded({extended:true}))
@@ -71,6 +71,6 @@ app.use((req, res) => {
 
 app.use(errorHandler)
 
-app.listen(port , ()=>{
-    console.log(`Server is running on port: ${port}`)
-})
+app.listen(port, "0.0.0.0", () => {
+  console.log(`Server is running on port ${port}`);
+});

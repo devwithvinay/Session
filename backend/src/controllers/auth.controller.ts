@@ -1,12 +1,26 @@
 import type { NextFunction, Request, Response } from "express";
-
 import User from "../model/User.model.js";
 import crypto from "crypto";
 import nodemailer from "nodemailer";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-
 import { AppError } from "../utils/AppError.js";
+
+/* =========================================================
+   COOKIE OPTIONS
+========================================================= */
+
+const getCookieOptions = () => {
+  const isProduction = process.env.NODE_ENV === "production";
+
+  return {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: (isProduction ? "none" : "lax") as "none" | "lax",
+    maxAge: 24 * 60 * 60 * 1000,
+    path: "/",
+  };
+};
 
 /* =========================================================
    MAIL TRANSPORTER
@@ -22,9 +36,15 @@ const createMailTransporter = () => {
     throw new AppError("Email service is not configured.", 500);
   }
 
+  const parsedPort = Number(port);
+
+  if (!Number.isInteger(parsedPort) || parsedPort <= 0) {
+    throw new AppError("Email service port is invalid.", 500);
+  }
+
   return nodemailer.createTransport({
     host,
-    port: Number(port),
+    port: parsedPort,
     secure: false,
     auth: {
       user,
@@ -97,7 +117,9 @@ export const registerUser = async function (
 
       text: `Please verify your email by clicking this link:
 
-${verificationUrl}`,
+${verificationUrl}
+
+This verification link expires in 15 minutes.`,
 
       html: `
         <div style="font-family: Arial, sans-serif; padding: 30px;">
@@ -164,10 +186,6 @@ export const verifyUser = async function (
       throw new AppError("Invalid verification token.", 400);
     }
 
-    /*
-     * verificationToken and tokenExpiry use select:false
-     * in User.model.ts, so explicitly select them here.
-     */
     const user = await User.findOne({
       verificationToken: token,
       tokenExpiry: {
@@ -181,18 +199,11 @@ export const verifyUser = async function (
 
     user.isVerified = true;
 
-    /*
-     * exactOptionalPropertyTypes is enabled,
-     * therefore we use empty values instead of undefined.
-     */
     user.verificationToken = "";
     user.tokenExpiry = new Date(0);
 
     await user.save();
 
-    /*
-     * Redirect to frontend login page after verification.
-     */
     const frontendUrl = process.env.BASE_URL;
 
     if (frontendUrl) {
@@ -226,10 +237,6 @@ export const loginUser = async function (
 
     const normalizedEmail = email.trim().toLowerCase();
 
-    /*
-     * password has select:false in User.model.ts.
-     * Explicitly select it for password comparison.
-     */
     const user = await User.findOne({
       email: normalizedEmail,
     }).select("+password");
@@ -251,7 +258,7 @@ export const loginUser = async function (
     const JWT_SECRET = process.env.JWT_SECRET;
 
     if (!JWT_SECRET) {
-      console.error("JWT_SECRET is missing.");
+      console.error("JWT_SECRET is missing from environment variables.");
 
       throw new AppError("Authentication service is not configured.", 500);
     }
@@ -267,17 +274,7 @@ export const loginUser = async function (
       },
     );
 
-    const cookieOption = {
-      httpOnly: true,
-
-      secure: process.env.NODE_ENV === "production",
-
-      sameSite: "lax" as const,
-
-      maxAge: 24 * 60 * 60 * 1000,
-
-      path: "/",
-    };
+    const cookieOption = getCookieOptions();
 
     res.cookie("token", token, cookieOption);
 
@@ -347,7 +344,6 @@ export const updateUsername = async function (
     return res.status(200).json({
       message: "Username updated successfully.",
       success: true,
-
       user: {
         _id: user._id,
         username: user.username,
@@ -369,14 +365,13 @@ export const logout = async function (
   next: NextFunction,
 ) {
   try {
+    const cookieOption = getCookieOptions();
+
     res.clearCookie("token", {
-      httpOnly: true,
-
-      secure: process.env.NODE_ENV === "production",
-
-      sameSite: "lax",
-
-      path: "/",
+      httpOnly: cookieOption.httpOnly,
+      secure: cookieOption.secure,
+      sameSite: cookieOption.sameSite,
+      path: cookieOption.path,
     });
 
     return res.status(200).json({
@@ -410,13 +405,16 @@ export const forgotPassword = async function (
       email: normalizedEmail,
     });
 
+    const genericMessage =
+      "If an account exists with this email, a password reset link has been sent.";
+
     /*
-     * Never reveal whether an email exists.
-     */
+      Never reveal whether an email exists.
+    */
+
     if (!user) {
       return res.status(200).json({
-        message:
-          "If an account exists with this email, a password reset link has been sent.",
+        message: genericMessage,
         success: true,
       });
     }
@@ -489,8 +487,7 @@ This link expires in 10 minutes.`,
     await transporter.sendMail(resetMailOptions);
 
     return res.status(200).json({
-      message:
-        "If an account exists with this email, a password reset link has been sent.",
+      message: genericMessage,
       success: true,
     });
   } catch (error) {
@@ -514,10 +511,6 @@ export const resetpassword = async function (
       throw new AppError("Invalid or expired reset token.", 400);
     }
 
-    /*
-     * resetPasswordToken and resetTokenExpires
-     * use select:false in User.model.ts.
-     */
     const user = await User.findOne({
       resetPasswordToken: resetToken,
       resetTokenExpires: {
@@ -540,14 +533,11 @@ export const resetpassword = async function (
     }
 
     /*
-     * User model pre-save hook hashes the password.
-     */
+      User model pre-save hook hashes the password.
+    */
+
     user.password = password;
 
-    /*
-     * exactOptionalPropertyTypes is enabled,
-     * so use empty values instead of undefined.
-     */
     user.resetPasswordToken = "";
     user.resetTokenExpires = new Date(0);
 

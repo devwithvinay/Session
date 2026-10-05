@@ -20,3 +20,9 @@ yarn-error.log*
 Thumbs.db
 # TypeScript
 *.tsbuildinfo
+
+node_modules/
+.env
+.env.*
+.next/
+dist/
