@@ -1,7 +1,7 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import LiveClock from "./LiveClock";
 import { apiFetch } from "../../lib/api";
 
@@ -17,6 +17,8 @@ interface MeResponse {
 }
 
 export default function DashboardHeader() {
+  const router = useRouter();
+
   const [date, setDate] = useState("");
   const [username, setUsername] = useState("Vinay");
 
@@ -54,8 +56,11 @@ export default function DashboardHeader() {
 
   const parts = date.split(",");
 
-  const firstName =
-    username.trim().split(" ")[0] || "Vinay";
+  const firstName = username.trim().split(" ")[0] || "Vinay";
+
+  const handleProfileClick = () => {
+    router.push("/app/settings");
+  };
 
   return (
     <header className="relative">
@@ -85,8 +90,13 @@ export default function DashboardHeader() {
             <span className="absolute right-[7px] top-[6px] h-2 w-2 rounded-full bg-red-400 ring-2 ring-white/20" />
           </button>
 
-          {/* Avatar */}
-          <div className="flex items-center gap-3">
+          {/* Avatar / Profile */}
+          <button
+            type="button"
+            onClick={handleProfileClick}
+            aria-label="Open profile settings"
+            className="flex items-center gap-3 rounded-full transition hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-white/20"
+          >
             <div className="h-10 w-10 overflow-hidden rounded-full border border-white/30 bg-slate-800/50">
               <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-white">
                 {firstName.charAt(0).toUpperCase()}
@@ -98,7 +108,7 @@ export default function DashboardHeader() {
             </span>
 
             <ChevronDownIcon />
-          </div>
+          </button>
         </div>
       </div>
 
@@ -195,8 +205,8 @@ function CalendarIcon() {
       strokeLinejoin="round"
     >
       <rect x="3" y="4" width="18" height="17" rx="3" />
+
       <path d="M16 2v4M8 2v4M3 10h18" />
     </svg>
   );
 }
-

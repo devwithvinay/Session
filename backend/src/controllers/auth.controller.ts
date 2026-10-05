@@ -6,263 +6,330 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { AppError } from "../utils/AppError.js";
 
-export const registerUser = async function (req: Request, res: Response, next: NextFunction) {
-  // get data from body
-  const { username, email, password } = req.body;
+/* =========================================================
+   MAIL TRANSPORTER
+========================================================= */
 
-  // user validate
+const createMailTransporter = () => {
+  const host = process.env.MAILTRAP_HOST;
+  const port = process.env.MAILTRAP_PORT;
+  const user = process.env.MAILTRAP_USER;
+  const pass = process.env.MAILTRAP_PASS;
+
+  if (!host || !port || !user || !pass) {
+    throw new AppError("Email service is not configured.", 500);
+  }
+
+  return nodemailer.createTransport({
+    host,
+    port: Number(port),
+    secure: false,
+    auth: {
+      user,
+      pass,
+    },
+  });
+};
+
+/* =========================================================
+   REGISTER
+========================================================= */
+
+export const registerUser = async function (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
   try {
+    const { username, email, password } = req.body;
+
     if (!username || !email || !password) {
-      return res.status(400).json({
-        message: "All fields are required",
-      });
-    }
-    // if this email already exists
-
-    const existingUser = await User.findOne({ email });
-
-    if (existingUser) {
-      return res.status(400).json({
-        message: "User already exists",
-      });
+      throw new AppError("All fields are required.", 400);
     }
 
-    const user = await User.create({ username, email, password });
-    if (!user) {
-      return res.status(400).json({
-        message: "Failed to Register",
-      });
-    }
+    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedUsername = username.trim();
 
-    // create verification token
-
-    const token = crypto.randomBytes(32).toString("hex");
-    console.log(token);
-
-    //store token
-    user.verificationToken = token;
-
-    //save it in user
-    await user.save();
-
-    // generate email
-
-    const transporter = nodemailer.createTransport({
-      host: process.env.MAILTRAP_HOST,
-      port: process.env.MAILTRAP_PORT,
-      secure: false, // use STARTTLS (upgrade connection to TLS after connecting)
-      auth: {
-        user: process.env.MAILTRAP_USER,
-        pass: process.env.MAILTRAP_PASS,
-      },
+    const existingUser = await User.findOne({
+      email: normalizedEmail,
     });
 
-   const verificationUrl = `${process.env.BACKEND_URL}/api/v1/users/verify/${token}`;
+    if (existingUser) {
+      throw new AppError("User already exists.", 409);
+    }
 
-   const mailOption = {
-     from: process.env.MAILTRAP_SENDERMAIL,
-     to: user.email,
-     subject: "Please verify your email",
+    const verificationToken = crypto.randomBytes(32).toString("hex");
 
-     text: `Please verify your email by clicking this link:
+    const user = await User.create({
+      username: normalizedUsername,
+      email: normalizedEmail,
+      password,
+      verificationToken,
+      tokenExpiry: new Date(Date.now() + 15 * 60 * 1000),
+    });
+
+    if (!user) {
+      throw new AppError("Failed to register user.", 500);
+    }
+
+    const backendUrl = process.env.BACKEND_URL;
+
+    if (!backendUrl) {
+      throw new AppError("Backend URL is not configured.", 500);
+    }
+
+    const verificationUrl = `${backendUrl}/api/v1/users/verify/${verificationToken}`;
+
+    const transporter = createMailTransporter();
+
+    const senderEmail = process.env.MAILTRAP_SENDERMAIL;
+
+    if (!senderEmail) {
+      throw new AppError("Email sender is not configured.", 500);
+    }
+
+    const mailOptions = {
+      from: senderEmail,
+      to: user.email,
+      subject: "Please verify your email",
+      text: `Please verify your email by clicking this link:
+
 ${verificationUrl}`,
 
-     html: `
-    <div style="font-family: Arial, sans-serif; padding: 30px;">
-      <h2>Verify your email</h2>
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 30px;">
+          <h2>Verify your email</h2>
 
-      <p>Thanks for creating your Session account.</p>
+          <p>Thanks for creating your Session account.</p>
 
-      <p>Please click the button below to verify your email address:</p>
+          <p>
+            Please click the button below to verify your email address:
+          </p>
 
-      <a
-        href="${verificationUrl}"
-        style="
-          display: inline-block;
-          padding: 12px 20px;
-          background-color: #111827;
-          color: white;
-          text-decoration: none;
-          border-radius: 8px;
-          font-weight: 600;
-        "
-      >
-        Verify Email
-      </a>
+          <a
+            href="${verificationUrl}"
+            style="
+              display: inline-block;
+              padding: 12px 20px;
+              background-color: #111827;
+              color: white;
+              text-decoration: none;
+              border-radius: 8px;
+              font-weight: 600;
+            "
+          >
+            Verify Email
+          </a>
 
-      <p style="margin-top: 20px; color: #666;">
-        If the button doesn't work, copy and paste this URL into your browser:
-      </p>
+          <p style="margin-top: 20px; color: #666;">
+            This verification link expires in 15 minutes.
+          </p>
 
-      <p style="color: #666; word-break: break-all;">
-        ${verificationUrl}
-      </p>
-    </div>
-  `,
-   };
+          <p style="color: #666; word-break: break-all;">
+            ${verificationUrl}
+          </p>
+        </div>
+      `,
+    };
 
-    //send the mail
-    await transporter.sendMail(mailOption);
+    await transporter.sendMail(mailOptions);
 
-    // success
-    res.status(200).json({
-      message: "User Registered Succesfully",
+    return res.status(201).json({
+      message: "User registered successfully.",
       success: true,
     });
   } catch (error) {
-    console.error("Register error:", error);
     next(error);
-
   }
 };
 
-export const verifyUser = async function (req: Request, res: Response, next: NextFunction) {
-  //get token from param to verify with database
-  const { token } = req.params;
+/* =========================================================
+   VERIFY USER
+========================================================= */
 
+export const verifyUser = async function (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
   try {
+    const { token } = req.params;
+
     if (!token) {
-      return res.status(400).json({
-        message: "Invalid token",
-      });
+      throw new AppError("Invalid verification token.", 400);
     }
 
     const user = await User.findOne({
       verificationToken: token,
+      tokenExpiry: {
+        $gt: new Date(),
+      },
     });
 
     if (!user) {
-      return res.status(400).json({
-        message: "Invalid or expired token",
-      });
+      throw new AppError("Invalid or expired verification token.", 400);
     }
 
-    // if it is real token then
-
     user.isVerified = true;
-    // token become undefined
     user.verificationToken = "";
-    //expired the token
-
     user.tokenExpiry = new Date(0);
 
     await user.save();
 
     return res.status(200).json({
-      message: "User Verification Successfully",
+      message: "User verification successful.",
       success: true,
     });
   } catch (error) {
     next(error);
-    return res.status(500).json({
-      message: "Failed to verify User",
-      success: false,
-      error,
-    });
   }
 };
+
+/* =========================================================
+   LOGIN
+========================================================= */
 
 export const loginUser = async function (
   req: Request,
   res: Response,
   next: NextFunction,
 ) {
-  const { email, password } = req.body;
-
   try {
+    const { email, password } = req.body;
+
     if (!email || !password) {
-      return res.status(400).json({
-        message: "All fields required",
-      });
+      throw new AppError("Email and password are required.", 400);
     }
-    // verify email
-    const user = await User.findOne({ email });
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    const user = await User.findOne({
+      email: normalizedEmail,
+    });
+
     if (!user) {
-      return res.status(400).json({
-        message: "Invalid email or password",
-      });
+      throw new AppError("Invalid email or password.", 401);
     }
 
     if (!user.isVerified) {
-      return res.status(400).json({
-        message: "Verify your email first",
-      });
+      throw new AppError("Please verify your email before logging in.", 403);
     }
-    //compare password
+
     const isMatch = await bcrypt.compare(password, user.password);
-    console.log(isMatch);
 
     if (!isMatch) {
-      return res.status(400).json({
-        message: "Invalid Email or Password",
-      });
+      throw new AppError("Invalid email or password.", 401);
     }
-
-    // jwt
 
     const JWT_SECRET = process.env.JWT_SECRET;
 
     if (!JWT_SECRET) {
-      throw new Error("please provide jwt secret in env");
+      console.error("JWT_SECRET is missing.");
+
+      throw new AppError("Authentication service is not configured.", 500);
     }
 
     const token = jwt.sign(
       {
-        id: user._id,
-        email: email,
+        id: user._id.toString(),
+        email: user.email,
       },
-      // secret key
       JWT_SECRET,
-
-      { expiresIn: "24h" },
+      {
+        expiresIn: "24h",
+      },
     );
-   const cookieOption = {
-     httpOnly: true,
-     secure: process.env.NODE_ENV === "production",
-     sameSite: "lax" as const,
-     maxAge: 24 * 60 * 60 * 1000,
-   };
+
+    const cookieOption = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax" as const,
+      maxAge: 24 * 60 * 60 * 1000,
+      path: "/",
+    };
 
     res.cookie("token", token, cookieOption);
 
-    res.status(200).json({
-      message: "Login Successfully",
+    return res.status(200).json({
+      message: "Login successful.",
       success: true,
     });
   } catch (error) {
     next(error);
-    return res.status(500).json({
-      message: "Failed to login",
-      success: false,
-    });
   }
 };
 
-export const getUser = async function (req: Request, res: Response, next: NextFunction) {
+/* =========================================================
+   GET CURRENT USER
+========================================================= */
+
+export const getUser = async function (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
   try {
-    // req.user exist karta hai, tab uska id do nhi to undefined return ker do
     const user = await User.findById(req.user?.id).select("-password");
 
     if (!user) {
-      throw new AppError("User not found",404)
+      throw new AppError("User not found.", 404);
     }
 
     return res.status(200).json({
-      message: "User fetch successfully",
+      message: "User fetched successfully.",
       success: true,
       user,
     });
-
-    //JWT middleware se jo authenticated user's ID req.user mein aayi hai, us ID se MongoDB mein user find karo.
   } catch (error) {
     next(error);
-    return res.status(500).json({
-      message: "Failed to fetch user",
-      success: false,
-      error,
-    });
   }
 };
+
+/* =========================================================
+   UPDATE USERNAME
+========================================================= */
+
+export const updateUsername = async function (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const { username } = req.body;
+
+    if (!username) {
+      throw new AppError("Username is required.", 400);
+    }
+
+    const normalizedUsername = username.trim();
+
+    const user = await User.findById(req.user?.id);
+
+    if (!user) {
+      throw new AppError("User not found.", 404);
+    }
+
+    user.username = normalizedUsername;
+
+    await user.save();
+
+    return res.status(200).json({
+      message: "Username updated successfully.",
+      success: true,
+      user: {
+        _id: user._id,
+        username: user.username,
+        email: user.email,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/* =========================================================
+   LOGOUT
+========================================================= */
 
 export const logout = async function (
   req: Request,
@@ -270,143 +337,188 @@ export const logout = async function (
   next: NextFunction,
 ) {
   try {
-    res.cookie("token", "", {
-      expires: new Date(0),
+    res.clearCookie("token", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
     });
 
     return res.status(200).json({
-      message: "Logout Successfully",
+      message: "Logout successful.",
+      success: true,
     });
   } catch (error) {
     next(error);
-    return res.status(500).json({
-      message: "Failed",
-      error,
-    });
   }
 };
+
+/* =========================================================
+   FORGOT PASSWORD
+========================================================= */
 
 export const forgotPassword = async function (
   req: Request,
   res: Response,
   next: NextFunction,
 ) {
-  const { email } = req.body;
-
   try {
-    // email find kro database me
-    const user = await User.findOne({ email });
+    const { email } = req.body;
+
+    if (!email) {
+      throw new AppError("Email is required.", 400);
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    const user = await User.findOne({
+      email: normalizedEmail,
+    });
+
+    /*
+      Do not reveal whether an email exists.
+      This prevents user/email enumeration.
+    */
+
     if (!user) {
-      return res.status(400).json({
-        message: "Invalid Email",
+      return res.status(200).json({
+        message:
+          "If an account exists with this email, a password reset link has been sent.",
+        success: true,
       });
     }
 
-    // reset token generate
     const resetToken = crypto.randomBytes(32).toString("hex");
-    // store the token
+
     user.resetPasswordToken = resetToken;
 
-    // expiry token
-    user.resetTokenExpires = new Date(Date.now() + 10 * 60 * 1000); //  abhi se leke 10 min k baad expires
+    user.resetTokenExpires = new Date(Date.now() + 10 * 60 * 1000);
 
     await user.save();
-    // send mail
 
-    const transporter = nodemailer.createTransport({
-      host: process.env.MAILTRAP_HOST,
-      port: process.env.MAILTRAP_PORT,
-      secure: false, // use STARTTLS (upgrade connection to TLS after connecting)
-      auth: {
-        user: process.env.MAILTRAP_USER,
-        pass: process.env.MAILTRAP_PASS,
-      },
-    });
+    const frontendUrl = process.env.BASE_URL;
+
+    if (!frontendUrl) {
+      throw new AppError("Frontend URL is not configured.", 500);
+    }
+
+    /*
+      This should point to your frontend reset-password page.
+      Adjust the path if your actual page has a different route.
+    */
+
+    const resetUrl = `${frontendUrl}/reset-password/${resetToken}`;
+
+    const transporter = createMailTransporter();
+
+    const senderEmail = process.env.MAILTRAP_SENDERMAIL;
+
+    if (!senderEmail) {
+      throw new AppError("Email sender is not configured.", 500);
+    }
 
     const resetMailOptions = {
-      from: process.env.MAILTRAP_HOST, // sender address
-      to: user.email, // list of recipients
-      subject: "Please reset your password ", // subject line
-      text: ` Click on following link for reset password :
-      ${process.env.BASE_URL}/api/v1/users/resetpassword/${resetToken}`,
+      from: senderEmail,
+      to: user.email,
+      subject: "Reset your Session password",
+      text: `Click the following link to reset your password:
+
+${resetUrl}
+
+This link expires in 10 minutes.`,
+
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 30px;">
+          <h2>Reset your password</h2>
+
+          <p>
+            We received a request to reset your Session password.
+          </p>
+
+          <a
+            href="${resetUrl}"
+            style="
+              display: inline-block;
+              padding: 12px 20px;
+              background-color: #111827;
+              color: white;
+              text-decoration: none;
+              border-radius: 8px;
+              font-weight: 600;
+            "
+          >
+            Reset Password
+          </a>
+
+          <p style="margin-top: 20px; color: #666;">
+            This link expires in 10 minutes.
+          </p>
+        </div>
+      `,
     };
 
     await transporter.sendMail(resetMailOptions);
 
     return res.status(200).json({
-      message: "Password reset link send successfully",
+      message:
+        "If an account exists with this email, a password reset link has been sent.",
       success: true,
     });
   } catch (error) {
     next(error);
-    return res.status(500).json({
-      message: "Failed to forgot password",
-      success: false,
-      error,
-    });
   }
 };
 
-export const resetpassword = async function(req:Request , res:Response, next:NextFunction){
-  const {resetToken} = req.params ;
-  // reset token nhi h to //IMP
+/* =========================================================
+   RESET PASSWORD
+========================================================= */
+
+export const resetpassword = async function (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
   try {
-      if (!resetToken) {
-        return res.status(400).json({
-          message: "Invalid token",
-          success: false,
-        });
-      }
+    const { resetToken } = req.params;
 
-      const user = await User.findOne({
-        resetPasswordToken: resetToken,
-        resetTokenExpires: { $gt: new Date() },
-      });
-      if (!user) {
-        return res.status(400).json({
-          message: "Invalid Token",
-          success: false,
-        });
-      }
+    if (!resetToken) {
+      throw new AppError("Invalid or expired reset token.", 400);
+    }
 
-      // set password to user
+    const user = await User.findOne({
+      resetPasswordToken: resetToken,
+      resetTokenExpires: {
+        $gt: new Date(),
+      },
+    });
 
-      const { password, confirmPassword } = req.body;
+    if (!user) {
+      throw new AppError("Invalid or expired reset token.", 400);
+    }
 
-      if (!password || !confirmPassword) {
-        return res.status(400).json({
-          message: "All fields are required",
-        });
-      }
+    const { password, confirmPassword } = req.body;
 
-      // match password
-      if (password !== confirmPassword) {
-        return res.status(400).json({
-          message: "Password doesn't match",
-        });
-      }
+    if (!password || !confirmPassword) {
+      throw new AppError("Password and confirmation are required.", 400);
+    }
 
-      user.password = password;
+    if (password !== confirmPassword) {
+      throw new AppError("Passwords do not match.", 400);
+    }
 
-      user.resetPasswordToken = "";
-      user.resetTokenExpires = new Date(0);
+    user.password = password;
 
-      await user.save();
-      
-      return res.status(200).json({
-        message:"password reset successfully",
-        success:true,
-      })
-    
+    user.resetPasswordToken = "";
+
+    user.resetTokenExpires = new Date(0);
+
+    await user.save();
+
+    return res.status(200).json({
+      message: "Password reset successfully.",
+      success: true,
+    });
   } catch (error) {
     next(error);
-    return res.status(500).json({
-      message: "Failed to reset password",
-      success:false,
-      error
-    });
-    
   }
-
-
-}
+};

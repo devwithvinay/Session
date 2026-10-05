@@ -1,8 +1,33 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { apiFetch } from "../../../lib/api";
+
+interface User {
+  _id: string;
+  username: string;
+  email: string;
+}
+
+interface MeResponse {
+  success: boolean;
+  user: User;
+}
+
+interface UpdateUsernameResponse {
+  success: boolean;
+  message: string;
+  user: User;
+}
+
+interface LogoutResponse {
+  message: string;
+}
 
 export default function SettingsPage() {
+  const router = useRouter();
+
   const [theme, setTheme] = useState("system");
   const [focusDuration, setFocusDuration] = useState("25");
   const [shortBreak, setShortBreak] = useState("5");
@@ -10,6 +35,102 @@ export default function SettingsPage() {
 
   const [taskNotifications, setTaskNotifications] = useState(true);
   const [sessionNotifications, setSessionNotifications] = useState(true);
+
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [profileError, setProfileError] = useState("");
+
+  const [savingUsername, setSavingUsername] = useState(false);
+  const [saveMessage, setSaveMessage] = useState("");
+
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        setProfileLoading(true);
+        setProfileError("");
+
+        const data = await apiFetch<MeResponse>("/users/getme");
+
+        if (data.success && data.user) {
+          setUsername(data.user.username);
+          setEmail(data.user.email);
+        } else {
+          setProfileError("Unable to load profile.");
+        }
+      } catch (error) {
+        console.error("Failed to fetch user:", error);
+        setProfileError("Unable to load profile.");
+      } finally {
+        setProfileLoading(false);
+      }
+    };
+
+    fetchUser();
+  }, []);
+
+  const handleSaveChanges = async () => {
+    const trimmedUsername = username.trim();
+
+    if (trimmedUsername.length < 3) {
+      setSaveMessage("Username must be at least 3 characters.");
+      return;
+    }
+
+    try {
+      setSavingUsername(true);
+      setSaveMessage("");
+      setProfileError("");
+
+      const data = await apiFetch<UpdateUsernameResponse>(
+        "/users/updateusername",
+        {
+          method: "PUT",
+          body: JSON.stringify({
+            username: trimmedUsername,
+          }),
+        },
+      );
+
+      if (data.success && data.user) {
+        setUsername(data.user.username);
+        setEmail(data.user.email);
+        setSaveMessage("Changes saved successfully.");
+      } else {
+        setSaveMessage("Unable to save changes.");
+      }
+    } catch (error) {
+      console.error("Failed to update username:", error);
+
+      if (error instanceof Error) {
+        setSaveMessage(error.message);
+      } else {
+        setSaveMessage("Failed to save changes.");
+      }
+    } finally {
+      setSavingUsername(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      setLoggingOut(true);
+
+      await apiFetch<LogoutResponse>("/users/logout", {
+        method: "GET",
+      });
+
+      router.push("/login");
+      router.refresh();
+    } catch (error) {
+      console.error("Logout failed:", error);
+      setSaveMessage("Failed to logout. Please try again.");
+      setLoggingOut(false);
+    }
+  };
 
   return (
     <div className="min-h-screen px-5 py-6 md:px-8 lg:px-10">
@@ -37,20 +158,44 @@ export default function SettingsPage() {
             <div className="grid gap-4 md:grid-cols-2">
               <SettingInput
                 label="Username"
-                value="User"
+                value={profileLoading ? "Loading..." : username}
+                onChange={setUsername}
                 placeholder="Your username"
+                disabled={profileLoading || savingUsername}
               />
 
               <SettingInput
                 label="Email"
-                value="user@example.com"
+                value={profileLoading ? "Loading..." : email}
                 placeholder="Your email"
+                disabled
               />
             </div>
 
+            {profileError && (
+              <p className="mt-3 text-xs text-red-500">{profileError}</p>
+            )}
+
+            {saveMessage && (
+              <p
+                className={`mt-3 text-xs ${
+                  saveMessage.includes("successfully")
+                    ? "text-emerald-600"
+                    : "text-red-500"
+                }`}
+              >
+                {saveMessage}
+              </p>
+            )}
+
             <div className="mt-5 flex justify-end">
-              <button className="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800">
-                Save changes
+              <button
+                type="button"
+                onClick={handleSaveChanges}
+                disabled={profileLoading || savingUsername}
+                className="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {savingUsername ? "Saving..." : "Save changes"}
               </button>
             </div>
           </SettingsCard>
@@ -181,9 +326,11 @@ export default function SettingsPage() {
 
               <button
                 type="button"
-                className="rounded-xl border border-red-200 bg-red-50/60 px-5 py-2.5 text-sm font-medium text-red-500 transition hover:bg-red-100"
+                onClick={handleLogout}
+                disabled={loggingOut}
+                className="rounded-xl border border-red-200 bg-red-50/60 px-5 py-2.5 text-sm font-medium text-red-500 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Log out
+                {loggingOut ? "Logging out..." : "Log out"}
               </button>
             </div>
           </SettingsCard>
@@ -233,11 +380,15 @@ function SettingsCard({
 function SettingInput({
   label,
   value,
+  onChange,
   placeholder,
+  disabled = false,
 }: {
   label: string;
   value: string;
+  onChange?: (value: string) => void;
   placeholder: string;
+  disabled?: boolean;
 }) {
   return (
     <div>
@@ -246,9 +397,12 @@ function SettingInput({
       </label>
 
       <input
-        defaultValue={value}
+        value={value}
+        onChange={(event) => onChange?.(event.target.value)}
+        readOnly={!onChange}
+        disabled={disabled}
         placeholder={placeholder}
-        className="w-full rounded-xl border border-white/40 bg-white/45 px-4 py-3 text-sm text-slate-800 outline-none placeholder:text-slate-400 focus:border-slate-400/60 focus:bg-white/60"
+        className="w-full rounded-xl border border-white/40 bg-white/45 px-4 py-3 text-sm text-slate-800 outline-none placeholder:text-slate-400 focus:border-slate-400/60 focus:bg-white/60 disabled:cursor-not-allowed disabled:opacity-70"
       />
     </div>
   );

@@ -1,43 +1,58 @@
-import jwt from "jsonwebtoken"
-import type {NextFunction, Request, Response} from "express"
+import jwt from "jsonwebtoken";
+import type { NextFunction, Request, Response } from "express";
+import { AppError } from "../utils/AppError.js";
 
 interface JwtPayload {
   id: string;
   email: string;
+  iat?: number;
+  exp?: number;
 }
 
-
-export const loggedIn = async function(req:Request , res:Response , next:NextFunction){
-    console.log(req.cookies)
-
+export const loggedIn = function (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
   try {
-        const token = req.cookies?.token;
-        //           cookie ko retieve krta h token se 
-        //jo token name se cookie store h usko fir ek token var m store kro
+    const token = req.cookies?.token;
 
-        if (!token) {
-          return res.status(400).json({
-            message: "Invalid token ",
-          });
-        }
-    
-        
-        const JWT_SECRET=  process.env.JWT_SECRET
-        if (!JWT_SECRET){
-            throw new Error("Please provide JWT_SECRET in env");
-        }
+    // No token
+    if (!token) {
+      throw new AppError("Authentication required. Please login.", 401);
+    }
 
-         const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload
-         req.user = decoded;
+    const JWT_SECRET = process.env.JWT_SECRET;
 
-         next();
-    
+    // Server configuration error
+    if (!JWT_SECRET) {
+      console.error("JWT_SECRET is missing from environment variables");
+
+      throw new AppError("Authentication service is not configured.", 500);
+    }
+
+    // Verify token
+    const decoded = jwt.verify(token, JWT_SECRET);
+
+    // Validate payload
+    if (
+      typeof decoded !== "object" ||
+      decoded === null ||
+      typeof decoded.id !== "string" ||
+      typeof decoded.email !== "string"
+    ) {
+      throw new AppError("Invalid authentication token.", 401);
+    }
+
+    const user = decoded as JwtPayload;
+
+    req.user = {
+      id: user.id,
+      email: user.email,
+    };
+
+    next();
   } catch (error) {
-    return res.status(500).json({
-        message:"Failed to Authentication",
-        success:false,
-        error
-    })
-    
+    next(error);
   }
-}
+};

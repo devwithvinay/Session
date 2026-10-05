@@ -32,7 +32,7 @@ app.use(
   cors({
     origin: process.env.BASE_URL,
     credentials: true,
-    methods: ["GET", "POST", "DELETE" , "PATCH"],
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     allowedHeaders: ["Content-Type", "Authorization"],
   }),
 );
@@ -58,6 +58,14 @@ app.use("/api/v1/session",sessionRoutes)
 app.use("/api/v1/analytics",analyticsRoutes)
 app.use("/api/v1/leaderboard",leaderBoardRoute)
 app.use("/api/v1/tasks", taskRoutes)
+
+
+app.use((req, res) => {
+  return res.status(404).json({
+    success: false,
+    message: `Route ${req.method} ${req.originalUrl} not found`,
+  });
+});
 
 // global error handle
 

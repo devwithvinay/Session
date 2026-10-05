@@ -1,4 +1,5 @@
 import express from "express";
+
 import {
   forgotPassword,
   getUser,
@@ -6,26 +7,42 @@ import {
   logout,
   registerUser,
   resetpassword,
+  updateUsername,
   verifyUser,
 } from "../controllers/auth.controller.js";
-import { loggedIn } from "../middleware/auth.middleware.js";
 
+import { loggedIn } from "../middleware/auth.middleware.js";
 import { validate } from "../middleware/validate.js";
+
 import {
   forgotPasswordSchema,
   loginSchema,
   registerSchema,
   resetPasswordSchema,
+  updateUsernameSchema,
 } from "../validators/auth.validator.js";
 
 const router = express.Router();
 
 router.post("/register", validate(registerSchema), registerUser);
+
 router.get("/verify/:token", verifyUser);
+
 router.post("/login", validate(loginSchema), loginUser);
+
 router.get("/getme", loggedIn, getUser);
+
 router.get("/logout", logout);
+
+router.put(
+  "/updateusername",
+  loggedIn,
+  validate(updateUsernameSchema),
+  updateUsername,
+);
+
 router.post("/forgotpassword", validate(forgotPasswordSchema), forgotPassword);
+
 router.post(
   "/resetpassword/:resetToken",
   validate(resetPasswordSchema),

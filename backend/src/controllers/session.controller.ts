@@ -1,12 +1,20 @@
 import type { NextFunction, Request, Response } from "express";
+
 import FocusSession from "../model/FocusSession.js";
 
 const DEFAULT_FOCUS_DURATION = 25 * 60;
+
 const MIN_SESSION_DURATION = 5 * 60;
+
 const MAX_SESSION_DURATION = 120 * 60;
 
 type SessionMode = "focus" | "short" | "long";
 
+/**
+ * Normalize session mode.
+ *
+ * Legacy sessions may not have a mode.
+ */
 const getSessionMode = (value: unknown): SessionMode => {
   if (value === "short" || value === "long") {
     return value;
@@ -15,6 +23,12 @@ const getSessionMode = (value: unknown): SessionMode => {
   return "focus";
 };
 
+/**
+ * Normalize and validate target duration.
+ *
+ * Minimum: 5 minutes
+ * Maximum: 120 minutes
+ */
 const getTargetDuration = (value: unknown, mode: SessionMode): number => {
   const parsedDuration = Number(value);
 
@@ -36,14 +50,11 @@ const getTargetDuration = (value: unknown, mode: SessionMode): number => {
   return DEFAULT_FOCUS_DURATION;
 };
 
-/*
- * Legacy session compatibility
+/**
+ * Normalize legacy sessions.
  *
- * Old sessions may not have:
- * - mode
- * - targetDuration
- *
- * Before saving an old session, we fill those values.
+ * This also makes sure old/corrupted targetDuration
+ * values cannot bypass the current duration limits.
  */
 const normalizeSession = (session: {
   mode?: SessionMode;
@@ -51,14 +62,7 @@ const normalizeSession = (session: {
 }) => {
   const mode = getSessionMode(session.mode);
 
-  const targetDuration =
-    Number(session.targetDuration) > 0
-      ? Number(session.targetDuration)
-      : mode === "short"
-        ? 5 * 60
-        : mode === "long"
-          ? 15 * 60
-          : DEFAULT_FOCUS_DURATION;
+  const targetDuration = getTargetDuration(session.targetDuration, mode);
 
   session.mode = mode;
   session.targetDuration = targetDuration;
@@ -69,6 +73,9 @@ const normalizeSession = (session: {
   };
 };
 
+/**
+ * START SESSION
+ */
 export const startSession = async function (
   req: Request,
   res: Response,
@@ -79,8 +86,8 @@ export const startSession = async function (
   try {
     if (!userId) {
       return res.status(401).json({
-        message: "Unauthorized",
         success: false,
+        message: "Unauthorized",
       });
     }
 
@@ -88,6 +95,10 @@ export const startSession = async function (
 
     const targetDuration = getTargetDuration(req.body?.targetDuration, mode);
 
+    /*
+     * Check whether this user already has
+     * an active or paused session.
+     */
     const existingSession = await FocusSession.findOne({
       user: userId,
       status: {
@@ -99,12 +110,17 @@ export const startSession = async function (
 
     if (existingSession) {
       /*
-       * Normalize legacy sessions BEFORE saving.
+       * Normalize legacy session before using it.
        */
-      const normalized = normalizeSession(existingSession);
+      const { targetDuration: normalizedTargetDuration } =
+        normalizeSession(existingSession);
 
       let elapsedSeconds = Number(existingSession.duration || 0);
 
+      /*
+       * If currently active, calculate the
+       * time spent since activeStartTime.
+       */
       if (existingSession.status === "active") {
         const now = new Date();
 
@@ -115,17 +131,21 @@ export const startSession = async function (
         elapsedSeconds += Math.max(0, activeSeconds);
       }
 
-      if (elapsedSeconds >= normalized.targetDuration) {
-        existingSession.duration = normalized.targetDuration;
+      /*
+       * If the existing session has already
+       * reached its target, automatically complete it.
+       */
+      if (elapsedSeconds >= normalizedTargetDuration) {
+        existingSession.duration = normalizedTargetDuration;
 
         existingSession.endTime = new Date();
+
         existingSession.status = "completed";
 
         await existingSession.save();
       } else {
         /*
-         * Save the normalized legacy fields even
-         * when the session is still active.
+         * Save normalized legacy fields.
          */
         if (
           existingSession.isModified("mode") ||
@@ -135,8 +155,8 @@ export const startSession = async function (
         }
 
         return res.status(400).json({
-          message: "User already has an active session",
           success: false,
+          message: "User already has an active session",
           session: existingSession,
         });
       }
@@ -155,15 +175,27 @@ export const startSession = async function (
     });
 
     return res.status(200).json({
-      message: "Session started",
       success: true,
+      message: "Session started",
       session,
     });
   } catch (error) {
+    /*
+     * Important:
+     *
+     * The unique partial index prevents concurrent
+     * requests from creating multiple active sessions.
+     *
+     * If MongoDB rejects a duplicate active session,
+     * send it to the global error handler.
+     */
     next(error);
   }
 };
 
+/**
+ * PAUSE SESSION
+ */
 export const pauseSession = async function (
   req: Request,
   res: Response,
@@ -175,18 +207,25 @@ export const pauseSession = async function (
   try {
     if (!userId) {
       return res.status(401).json({
-        message: "Unauthorized",
         success: false,
+        message: "Unauthorized",
       });
     }
 
     if (!sessionId) {
       return res.status(400).json({
-        message: "Session id is required",
         success: false,
+        message: "Session id is required",
       });
     }
 
+    /*
+     * IMPORTANT:
+     *
+     * sessionId AND userId are checked together.
+     *
+     * A user cannot pause another user's session.
+     */
     const session = await FocusSession.findOne({
       _id: sessionId,
       user: userId,
@@ -195,14 +234,11 @@ export const pauseSession = async function (
 
     if (!session) {
       return res.status(400).json({
-        message: "Active session not found",
         success: false,
+        message: "Active session not found",
       });
     }
 
-    /*
-     * Fix legacy sessions before saving.
-     */
     const { targetDuration } = normalizeSession(session);
 
     const now = new Date();
@@ -216,13 +252,25 @@ export const pauseSession = async function (
     session.duration = Math.min(session.duration, targetDuration);
 
     session.pausedAt = now;
-    session.status = "paused";
+
+    /*
+     * If the timer naturally reached its target
+     * while the user was active, complete it.
+     */
+    if (session.duration >= targetDuration) {
+      session.duration = targetDuration;
+      session.endTime = now;
+      session.status = "completed";
+    } else {
+      session.status = "paused";
+    }
 
     await session.save();
 
     return res.status(200).json({
-      message: "Session paused",
       success: true,
+      message:
+        session.status === "completed" ? "Session completed" : "Session paused",
       session,
     });
   } catch (error) {
@@ -230,6 +278,9 @@ export const pauseSession = async function (
   }
 };
 
+/**
+ * RESUME SESSION
+ */
 export const resumeSession = async function (
   req: Request,
   res: Response,
@@ -241,18 +292,21 @@ export const resumeSession = async function (
   try {
     if (!userId) {
       return res.status(401).json({
-        message: "Unauthorized",
         success: false,
+        message: "Unauthorized",
       });
     }
 
     if (!sessionId) {
       return res.status(400).json({
-        message: "Session id is required",
         success: false,
+        message: "Session id is required",
       });
     }
 
+    /*
+     * Ownership is checked here as well.
+     */
     const session = await FocusSession.findOne({
       _id: sessionId,
       user: userId,
@@ -261,16 +315,16 @@ export const resumeSession = async function (
 
     if (!session) {
       return res.status(400).json({
-        message: "Paused session not found",
         success: false,
+        message: "Paused session not found",
       });
     }
 
-    /*
-     * Fix legacy sessions before saving.
-     */
     const { targetDuration } = normalizeSession(session);
 
+    /*
+     * A paused session may already be complete.
+     */
     if (Number(session.duration || 0) >= targetDuration) {
       session.duration = targetDuration;
       session.endTime = new Date();
@@ -279,20 +333,43 @@ export const resumeSession = async function (
       await session.save();
 
       return res.status(400).json({
-        message: "Session duration is already complete",
         success: false,
+        message: "Session duration is already complete",
         session,
       });
     }
 
+    /*
+     * Make sure there isn't another active
+     * session for this user.
+     *
+     * Normally impossible because of the
+     * database-level unique index.
+     */
+    const anotherActiveSession = await FocusSession.findOne({
+      user: userId,
+      status: "active",
+      _id: {
+        $ne: session._id,
+      },
+    });
+
+    if (anotherActiveSession) {
+      return res.status(400).json({
+        success: false,
+        message: "User already has an active session",
+      });
+    }
+
     session.activeStartTime = new Date();
+
     session.status = "active";
 
     await session.save();
 
     return res.status(200).json({
-      message: "Session resumed",
       success: true,
+      message: "Session resumed",
       session,
     });
   } catch (error) {
@@ -300,6 +377,9 @@ export const resumeSession = async function (
   }
 };
 
+/**
+ * COMPLETE SESSION
+ */
 export const completeSession = async function (
   req: Request,
   res: Response,
@@ -311,18 +391,21 @@ export const completeSession = async function (
   try {
     if (!userId) {
       return res.status(401).json({
-        message: "Unauthorized",
         success: false,
+        message: "Unauthorized",
       });
     }
 
     if (!sessionId) {
       return res.status(400).json({
-        message: "Session id is required",
         success: false,
+        message: "Session id is required",
       });
     }
 
+    /*
+     * Ownership + valid status.
+     */
     const session = await FocusSession.findOne({
       _id: sessionId,
       user: userId,
@@ -333,18 +416,18 @@ export const completeSession = async function (
 
     if (!session) {
       return res.status(400).json({
-        message: "Active or paused session not found",
         success: false,
+        message: "Active or paused session not found",
       });
     }
 
-    /*
-     * Fix legacy sessions before saving.
-     */
     const { targetDuration } = normalizeSession(session);
 
     const endTime = new Date();
 
+    /*
+     * If active, calculate the latest active period.
+     */
     if (session.status === "active") {
       const activeSeconds = Math.floor(
         (endTime.getTime() - session.activeStartTime.getTime()) / 1000,
@@ -356,13 +439,14 @@ export const completeSession = async function (
     session.duration = Math.min(Number(session.duration || 0), targetDuration);
 
     session.endTime = endTime;
+
     session.status = "completed";
 
     await session.save();
 
     return res.status(200).json({
-      message: "Session completed",
       success: true,
+      message: "Session completed",
       session,
     });
   } catch (error) {
@@ -370,6 +454,9 @@ export const completeSession = async function (
   }
 };
 
+/**
+ * CANCEL SESSION
+ */
 export const cancelSession = async function (
   req: Request,
   res: Response,
@@ -381,18 +468,21 @@ export const cancelSession = async function (
   try {
     if (!userId) {
       return res.status(401).json({
-        message: "Unauthorized",
         success: false,
+        message: "Unauthorized",
       });
     }
 
     if (!sessionId) {
       return res.status(400).json({
-        message: "Session id is required",
         success: false,
+        message: "Session id is required",
       });
     }
 
+    /*
+     * Ownership + active/paused status.
+     */
     const session = await FocusSession.findOne({
       _id: sessionId,
       user: userId,
@@ -403,18 +493,19 @@ export const cancelSession = async function (
 
     if (!session) {
       return res.status(404).json({
-        message: "Active or paused session not found",
         success: false,
+        message: "Active or paused session not found",
       });
     }
 
-    /*
-     * Fix legacy sessions before saving.
-     */
     const { targetDuration } = normalizeSession(session);
 
     const now = new Date();
 
+    /*
+     * Only active sessions accumulate time
+     * between activeStartTime and cancellation.
+     */
     if (session.status === "active") {
       const elapsedSeconds = Math.floor(
         (now.getTime() - session.activeStartTime.getTime()) / 1000,
@@ -426,13 +517,14 @@ export const cancelSession = async function (
     session.duration = Math.min(Number(session.duration || 0), targetDuration);
 
     session.endTime = now;
+
     session.status = "cancelled";
 
     await session.save();
 
     return res.status(200).json({
-      message: "Session cancelled",
       success: true,
+      message: "Session cancelled",
       session,
     });
   } catch (error) {
@@ -440,6 +532,9 @@ export const cancelSession = async function (
   }
 };
 
+/**
+ * GET CURRENT SESSION
+ */
 export const getSession = async function (
   req: Request,
   res: Response,
@@ -450,11 +545,15 @@ export const getSession = async function (
 
     if (!userId) {
       return res.status(401).json({
-        message: "Unauthorized",
         success: false,
+        message: "Unauthorized",
       });
     }
 
+    /*
+     * Only this user's active/paused session
+     * can ever be returned.
+     */
     const session = await FocusSession.findOne({
       user: userId,
       status: {
@@ -465,17 +564,15 @@ export const getSession = async function (
     });
 
     /*
-     * If a legacy active/paused session exists,
-     * normalize it in memory so the frontend receives
-     * the required values.
+     * Normalize legacy session in memory.
      */
     if (session) {
       normalizeSession(session);
     }
 
     return res.status(200).json({
-      message: "Fetching successfully",
       success: true,
+      message: "Fetching successfully",
       session,
     });
   } catch (error) {
@@ -483,6 +580,9 @@ export const getSession = async function (
   }
 };
 
+/**
+ * GET SESSION HISTORY
+ */
 export const getSessionHistory = async function (
   req: Request,
   res: Response,
@@ -493,17 +593,35 @@ export const getSessionHistory = async function (
 
     if (!userId) {
       return res.status(401).json({
-        message: "Unauthorized",
         success: false,
+        message: "Unauthorized",
       });
     }
 
-    const page = Math.max(1, Number(req.query.page) || 1);
+    const requestedPage = Number(req.query.page);
 
-    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
+    const requestedLimit = Number(req.query.limit);
+
+    const page =
+      Number.isFinite(requestedPage) && requestedPage > 0
+        ? Math.floor(requestedPage)
+        : 1;
+
+    const limit =
+      Number.isFinite(requestedLimit) && requestedLimit > 0
+        ? Math.min(100, Math.floor(requestedLimit))
+        : 20;
 
     const skip = (page - 1) * limit;
 
+    /*
+     * IMPORTANT:
+     *
+     * History is filtered by userId.
+     *
+     * No user can retrieve another user's
+     * session history.
+     */
     const sessions = await FocusSession.find({
       user: userId,
     })
@@ -520,8 +638,8 @@ export const getSessionHistory = async function (
     const totalPages = Math.ceil(totalSessions / limit);
 
     return res.status(200).json({
-      message: "Session history fetched successfully",
       success: true,
+      message: "Session history fetched successfully",
       sessions,
       pagination: {
         page,
