@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 
 const sessions = [
   {
@@ -129,7 +128,6 @@ function Leaderboard() {
       }}
     >
       <div className="mx-auto max-w-7xl">
-        {/* HEADER */}
         <div className="mx-auto max-w-3xl text-center">
           <p className="text-xs font-medium uppercase tracking-[0.22em] text-black/35">
             Live productivity
@@ -147,9 +145,7 @@ function Leaderboard() {
           </p>
         </div>
 
-        {/* TABLE CARD */}
         <div className="mt-20 overflow-hidden rounded-[28px] border border-black/[0.08] bg-white shadow-[0_20px_60px_rgba(15,15,15,0.06)]">
-          {/* TABLE HEADER */}
           <div className="hidden grid-cols-[1.5fr_1.7fr_1fr_1fr_0.8fr_1fr] border-b border-black/[0.07] px-8 py-5 text-xs font-medium text-black/35 md:grid">
             <span>User</span>
             <span>Activity</span>
@@ -159,7 +155,6 @@ function Leaderboard() {
             <span>Status</span>
           </div>
 
-          {/* ROWS */}
           {sessions.map((session, index) => (
             <div
               key={session.name}
@@ -185,7 +180,6 @@ function Leaderboard() {
                 </div>
               </div>
 
-              {/* ACTIVITY */}
               <div className="mt-5 flex items-center gap-3 md:mt-0">
                 <div
                   className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-semibold ${session.activityBg}`}
@@ -201,7 +195,6 @@ function Leaderboard() {
                 </div>
               </div>
 
-              {/* DURATION */}
               <div className="mt-5 md:mt-0">
                 <p className="text-sm font-semibold text-black/85">
                   {session.duration}
@@ -209,7 +202,6 @@ function Leaderboard() {
                 <p className="mt-1 text-xs text-black/30 md:hidden">Duration</p>
               </div>
 
-              {/* STREAK */}
               <div className="mt-5 md:mt-0">
                 <p className="flex items-center gap-2 text-sm font-medium text-orange-500">
                   <span>🔥</span>
@@ -219,14 +211,12 @@ function Leaderboard() {
                 <p className="mt-1 text-xs text-black/30 md:hidden">Streak</p>
               </div>
 
-              {/* TIME */}
               <div className="mt-5 md:mt-0">
                 <p className="text-sm text-black/40">{session.time}</p>
 
                 <p className="mt-1 text-xs text-black/30 md:hidden">Time</p>
               </div>
 
-              {/* STATUS */}
               <div className="mt-5 md:mt-0">
                 <span className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-600">
                   <span className="flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 text-[9px] text-white">
@@ -241,7 +231,6 @@ function Leaderboard() {
           ))}
         </div>
 
-        {/* FOOTER NOTE */}
         <div className="mt-8 flex items-center justify-between px-2">
           <p className="text-xs text-black/30">
             Showing the latest focus sessions

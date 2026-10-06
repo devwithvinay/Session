@@ -13,7 +13,7 @@ function Features() {
       }}
     >
       <div className="mx-auto max-w-6xl">
-        {/* INTRO */}
+        
         <div className="grid gap-10 md:grid-cols-12 md:items-end">
           <div className="md:col-span-7">
             <p className="text-xs font-medium uppercase tracking-[0.22em] text-black/35">
@@ -35,9 +35,8 @@ function Features() {
           </div>
         </div>
 
-        {/* FEATURE 01 — TIMER */}
         <div className="mt-28 grid overflow-hidden rounded-[28px] border border-black/10 bg-white md:grid-cols-2">
-          {/* COPY */}
+
           <div className="flex min-h-[500px] flex-col justify-between p-8 md:p-12">
             <div>
               <span className="text-xs font-medium uppercase tracking-[0.18em] text-black/30">
@@ -62,7 +61,6 @@ function Features() {
             </div>
           </div>
 
-          {/* TIMER MOCKUP */}
           <div className="relative min-h-[500px] overflow-hidden bg-[#191919]">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_45%,rgba(255,255,255,0.08),transparent_42%)]" />
 
@@ -109,7 +107,6 @@ function Features() {
           </div>
         </div>
 
-        {/* FEATURE 02 — CONSISTENCY */}
         <div className="mt-5 grid overflow-hidden rounded-[28px] border border-black/10 bg-[#EDEBE5] md:grid-cols-12">
           <div className="relative min-h-[460px] overflow-hidden md:col-span-7">
             <div className="absolute left-10 top-10">
@@ -130,7 +127,6 @@ function Features() {
                 <p className="text-xs text-black/35">Best · 28 days</p>
               </div>
 
-              {/* Consistency grid */}
               <div className="grid grid-cols-14 gap-1.5">
                 {Array.from({ length: 56 }).map((_, index) => {
                   const level = index % 5;
@@ -178,7 +174,6 @@ function Features() {
           </div>
         </div>
 
-        {/* FEATURE 03 — ANALYTICS */}
         <div className="mt-5 grid overflow-hidden rounded-[28px] border border-black/10 bg-[#E7F0FA] md:grid-cols-12">
           {/* COPY */}
           <div className="flex min-h-[500px] flex-col justify-between p-8 md:col-span-5 md:p-12">
@@ -316,7 +311,6 @@ function Features() {
           </div>
         </div>
 
-        {/* CLOSING LINE */}
         <div className="mt-24 border-t border-black/10 pt-8">
           <p className="max-w-2xl text-sm leading-7 text-black/40">
             Designed for people who want to spend their time intentionally — not

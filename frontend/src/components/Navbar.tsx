@@ -24,7 +24,6 @@ function Navbar() {
             : "border-white/25 bg-black/10 backdrop-blur-md"
         }`}
       >
-        {/* Logo */}
         <a
           href="/"
           className="px-3 text-base font-semibold tracking-[-0.02em] text-white md:text-lg"
@@ -32,7 +31,6 @@ function Navbar() {
           Session
         </a>
 
-        {/* Navigation */}
         <div className="hidden items-center gap-1 md:flex">
           <a
             href="/"
@@ -63,7 +61,6 @@ function Navbar() {
           </a>
         </div>
 
-        {/* Login */}
         <a
           href="/login"
           className="rounded-full border border-white/30 bg-white/10 px-5 py-2 text-sm font-medium text-white transition hover:bg-white hover:text-black"

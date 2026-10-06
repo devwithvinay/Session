@@ -1,10 +1,9 @@
+import Link from "next/link";
 function Footer() {
   return (
     <footer id="about" className="bg-[#2F3133] px-6 py-20 text-white md:py-24">
       <div className="mx-auto max-w-7xl">
-        {/* Main Footer */}
         <div className="grid gap-16 md:grid-cols-12">
-          {/* Brand */}
           <div className="md:col-span-5">
             <h2 className="text-3xl font-semibold tracking-[-0.04em]">
               Session
@@ -15,18 +14,16 @@ function Footer() {
               better productivity habits.
             </p>
 
-            <a
-              href="#"
+            <Link
+              href="/register"
               className="mt-8 inline-flex items-center rounded-full border border-white/15 px-5 py-2.5 text-sm text-white/75 transition hover:border-white/30 hover:bg-white/10 hover:text-white"
             >
               Get Started
               <span className="ml-2">→</span>
-            </a>
+            </Link>
           </div>
 
-          {/* Links */}
           <div className="grid grid-cols-2 gap-10 sm:grid-cols-3 md:col-span-7">
-            {/* Product */}
             <div>
               <h3 className="text-xs font-medium uppercase tracking-[0.18em] text-white/35">
                 Product
@@ -63,7 +60,6 @@ function Footer() {
               </div>
             </div>
 
-            {/* Company */}
             <div>
               <h3 className="text-xs font-medium uppercase tracking-[0.18em] text-white/35">
                 Company
@@ -92,7 +88,7 @@ function Footer() {
                 </a>
 
                 <a
-                  href="#"
+                  href="https://github.com/devwithvinay"
                   className="block text-sm text-white/60 transition hover:text-white"
                 >
                   GitHub
@@ -100,7 +96,6 @@ function Footer() {
               </div>
             </div>
 
-            {/* Legal */}
             <div>
               <h3 className="text-xs font-medium uppercase tracking-[0.18em] text-white/35">
                 Legal
@@ -132,7 +127,6 @@ function Footer() {
           </div>
         </div>
 
-        {/* Bottom */}
         <div className="mt-20 border-t border-white/10 pt-7">
           <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
             <p className="text-xs text-white/35">
@@ -141,14 +135,14 @@ function Footer() {
 
             <div className="flex items-center gap-6">
               <a
-                href="#"
+                href="https://x.com/vinayverse_"
                 className="text-xs text-white/40 transition hover:text-white"
               >
                 X
               </a>
 
               <a
-                href="#"
+                href="https://github.com/devwithvinay"
                 className="text-xs text-white/40 transition hover:text-white"
               >
                 GitHub

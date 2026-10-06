@@ -144,15 +144,14 @@ function Dashboard() {
         backgroundSize: "48px 48px",
       }}
     >
-      {/* Soft green background glow */}
       <div className="pointer-events-none absolute left-[-140px] top-[12%] h-[420px] w-[420px] rounded-full bg-[#DCEBD7]/35 blur-3xl" />
 
       <div className="pointer-events-none absolute bottom-[-160px] right-[-100px] h-[460px] w-[460px] rounded-full bg-[#E2EEDC]/40 blur-3xl" />
 
       <div className="relative mx-auto max-w-6xl">
-        {/* Dashboard Card */}
+        
         <div className="overflow-hidden rounded-[30px] border border-[#DDE5D9] bg-white shadow-[0_25px_80px_rgba(54,76,55,0.12)]">
-          {/* ================= TOP BAR ================= */}
+
           <div className="flex min-h-[82px] items-center justify-between border-b border-[#E7ECE4] px-6 md:px-9">
             {/* Logo */}
             <p className="text-lg font-semibold tracking-[-0.03em] text-[#263B2A]">
@@ -167,9 +166,7 @@ function Dashboard() {
             </div>
           </div>
 
-          {/* ================= DASHBOARD BODY ================= */}
           <div className="grid min-h-[570px] md:grid-cols-[190px_1fr]">
-            {/* ================= SIDEBAR ================= */}
             <aside className="flex flex-col border-b border-[#DCE8EE] bg-[#F1F8FC] md:border-b-0 md:border-r">
               {/* Navigation */}
               <div className="flex-1 p-4">
@@ -224,9 +221,7 @@ function Dashboard() {
               </div>
             </aside>
 
-            {/* ================= MAIN DASHBOARD ================= */}
             <main className="relative flex flex-col bg-white">
-              {/* ================= CLOCK ================= */}
               {activeTab === "clock" && (
                 <div className="flex flex-1 flex-col items-center justify-center px-6 py-16">
                   <div className="text-center">
@@ -245,7 +240,6 @@ function Dashboard() {
                 </div>
               )}
 
-              {/* ================= STOPWATCH ================= */}
               {activeTab === "stopwatch" && (
                 <div className="flex flex-1 flex-col items-center justify-center px-6 py-16">
                   <p className="text-xs font-medium uppercase tracking-[0.2em] text-[#93A093]">
@@ -276,7 +270,6 @@ function Dashboard() {
                 </div>
               )}
 
-              {/* ================= COUNTDOWN ================= */}
               {activeTab === "countdown" && (
                 <div className="flex flex-1 flex-col items-center justify-center px-6 py-16">
                   <p className="text-xs font-medium uppercase tracking-[0.2em] text-[#93A093]">
@@ -323,7 +316,6 @@ function Dashboard() {
                 </div>
               )}
 
-              {/* ================= ANALYTICS ================= */}
               {activeTab === "analytics" && (
                 <div className="flex-1 px-6 py-10 md:px-10">
                   <div>
@@ -336,7 +328,6 @@ function Dashboard() {
                     </h3>
                   </div>
 
-                  {/* Analytics Box */}
                   <div className="mt-10 rounded-2xl border border-[#DCE8EE] bg-[#F7FBFD] p-5 md:p-7">
                     <div className="flex items-end justify-between">
                       <div>
