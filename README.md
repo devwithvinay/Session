@@ -5,6 +5,8 @@
 Session helps you manage your daily tasks, run focused work sessions, track productivity, and review your session history through a clean, modern dashboard.
 
 ---
+live - https://session-self.vercel.app/
+-----
 
 ## ✨ Features
 
