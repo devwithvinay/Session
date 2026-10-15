@@ -1,18 +1,16 @@
-import type { Request , Response } from "express";
+import type { Request, Response } from "express";
 import mongoose from "mongoose";
 import FocusSession from "../model/FocusSession.js";
 
 export const getLeaderboard = async function (req: Request, res: Response) {
   try {
     const leaderboard = await FocusSession.aggregate([
-      // Only completed sessions
       {
         $match: {
           status: "completed",
         },
       },
 
-      // Group sessions by user
       {
         $group: {
           _id: "$user",
@@ -27,19 +25,16 @@ export const getLeaderboard = async function (req: Request, res: Response) {
         },
       },
 
-      // Sort users by total focus time
       {
         $sort: {
           totalFocusTime: -1,
         },
       },
 
-      // Get top 100 users
       {
         $limit: 100,
       },
 
-      // Get user information
       {
         $lookup: {
           from: "users",
@@ -49,12 +44,10 @@ export const getLeaderboard = async function (req: Request, res: Response) {
         },
       },
 
-      // Convert user array into object
       {
         $unwind: "$user",
       },
 
-      // Select the fields we need
       {
         $project: {
           _id: 0,
@@ -66,7 +59,6 @@ export const getLeaderboard = async function (req: Request, res: Response) {
       },
     ]);
 
-    // Add rank
     const rankedLeaderboard = leaderboard.map((user, index) => ({
       rank: index + 1,
       ...user,

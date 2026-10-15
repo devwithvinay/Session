@@ -9,10 +9,6 @@ interface AuthRequest extends Request {
   };
 }
 
-// ==============================
-// CREATE TASK
-// ==============================
-
 export const createTask = async (
   req: AuthRequest,
   res: Response,
@@ -28,7 +24,6 @@ export const createTask = async (
 
     const { title, description, priority, dueDate } = req.body;
 
-    // Validate title
     if (!title || !title.trim()) {
       return res.status(400).json({
         message: "Task title is required",
@@ -36,27 +31,27 @@ export const createTask = async (
       });
     }
 
-const taskData: {
-  user: string;
-  title: string;
-  description?: string;
-  priority: "low" | "medium" | "high";
-  dueDate?: Date;
-} = {
-  user: req.user.id,
-  title: title.trim(),
-  priority: priority || "medium",
-};
+    const taskData: {
+      user: string;
+      title: string;
+      description?: string;
+      priority: "low" | "medium" | "high";
+      dueDate?: Date;
+    } = {
+      user: req.user.id,
+      title: title.trim(),
+      priority: priority || "medium",
+    };
 
-if (description !== undefined) {
-  taskData.description = description.trim();
-}
+    if (description !== undefined) {
+      taskData.description = description.trim();
+    }
 
-if (dueDate !== undefined) {
-  taskData.dueDate = new Date(dueDate);
-}
+    if (dueDate !== undefined) {
+      taskData.dueDate = new Date(dueDate);
+    }
 
-const task = await Task.create(taskData);
+    const task = await Task.create(taskData);
 
     return res.status(201).json({
       message: "Task created successfully",
@@ -67,10 +62,6 @@ const task = await Task.create(taskData);
     next(error);
   }
 };
-
-// ==============================
-// GET ALL TASKS
-// ==============================
 
 export const getTasks = async (
   req: AuthRequest,
@@ -101,10 +92,6 @@ export const getTasks = async (
   }
 };
 
-// ==============================
-// UPDATE TASK
-// ==============================
-
 export const updateTask = async (
   req: AuthRequest,
   res: Response,
@@ -134,7 +121,6 @@ export const updateTask = async (
       });
     }
 
-    // Update title
     if (title !== undefined) {
       if (!title.trim()) {
         return res.status(400).json({
@@ -146,22 +132,18 @@ export const updateTask = async (
       task.title = title.trim();
     }
 
-    // Update description
     if (description !== undefined) {
       task.description = description.trim();
     }
 
-    // Update completed status
     if (completed !== undefined) {
       task.completed = completed;
     }
 
-    // Update priority
     if (priority !== undefined) {
       task.priority = priority;
     }
 
-    // Update due date
     if (dueDate !== undefined) {
       task.dueDate = new Date(dueDate);
     }
@@ -177,10 +159,6 @@ export const updateTask = async (
     next(error);
   }
 };
-
-// ==============================
-// DELETE TASK
-// ==============================
 
 export const deleteTask = async (
   req: AuthRequest,

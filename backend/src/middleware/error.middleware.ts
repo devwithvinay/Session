@@ -21,8 +21,6 @@ export const errorHandler = (
     stack: error.stack,
   });
 
-  // ---------------- ZOD VALIDATION ERROR ----------------
-
   if (error instanceof ZodError) {
     const errors = error.issues.map((issue) => ({
       field: issue.path.join("."),
@@ -35,8 +33,6 @@ export const errorHandler = (
       errors,
     });
   }
-
-  // ---------------- MONGOOSE VALIDATION ERROR ----------------
 
   if (error instanceof mongoose.Error.ValidationError) {
     const errors = Object.values(error.errors).map((err) => ({
@@ -51,16 +47,12 @@ export const errorHandler = (
     });
   }
 
-  // ---------------- MONGOOSE INVALID ID ----------------
-
   if (error instanceof mongoose.Error.CastError) {
     return res.status(400).json({
       success: false,
       message: `Invalid ${error.path}`,
     });
   }
-
-  // ---------------- DUPLICATE MONGODB DATA ----------------
 
   if (
     typeof error === "object" &&
@@ -73,8 +65,6 @@ export const errorHandler = (
       message: "This data already exists",
     });
   }
-
-  // ---------------- JWT ERRORS ----------------
 
   if (error instanceof jwt.TokenExpiredError) {
     return res.status(401).json({
@@ -89,8 +79,6 @@ export const errorHandler = (
       message: "Invalid authentication token.",
     });
   }
-
-  // ---------------- NORMAL APP ERROR ----------------
 
   const statusCode = error.statusCode ?? error.status ?? 500;
 

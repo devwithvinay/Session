@@ -6,9 +6,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { AppError } from "../utils/AppError.js";
 
-/* =========================================================
-   COOKIE OPTIONS
-========================================================= */
+
 
 const getCookieOptions = () => {
   const isProduction = process.env.NODE_ENV === "production";
@@ -22,9 +20,7 @@ const getCookieOptions = () => {
   };
 };
 
-/* =========================================================
-   MAIL TRANSPORTER
-========================================================= */
+
 
 const createMailTransporter = () => {
   const host = process.env.MAILTRAP_HOST;
@@ -53,9 +49,7 @@ const createMailTransporter = () => {
   });
 };
 
-/* =========================================================
-   REGISTER
-========================================================= */
+
 
 export const registerUser = async function (
   req: Request,
@@ -170,9 +164,7 @@ This verification link expires in 15 minutes.`,
   }
 };
 
-/* =========================================================
-   VERIFY USER
-========================================================= */
+
 
 export const verifyUser = async function (
   req: Request,
@@ -219,9 +211,7 @@ export const verifyUser = async function (
   }
 };
 
-/* =========================================================
-   LOGIN
-========================================================= */
+
 
 export const loginUser = async function (
   req: Request,
@@ -287,9 +277,7 @@ export const loginUser = async function (
   }
 };
 
-/* =========================================================
-   GET CURRENT USER
-========================================================= */
+
 
 export const getUser = async function (
   req: Request,
@@ -313,9 +301,6 @@ export const getUser = async function (
   }
 };
 
-/* =========================================================
-   UPDATE USERNAME
-========================================================= */
 
 export const updateUsername = async function (
   req: Request,
@@ -355,9 +340,7 @@ export const updateUsername = async function (
   }
 };
 
-/* =========================================================
-   LOGOUT
-========================================================= */
+
 
 export const logout = async function (
   req: Request,
@@ -383,9 +366,7 @@ export const logout = async function (
   }
 };
 
-/* =========================================================
-   FORGOT PASSWORD
-========================================================= */
+
 
 export const forgotPassword = async function (
   req: Request,
@@ -408,9 +389,7 @@ export const forgotPassword = async function (
     const genericMessage =
       "If an account exists with this email, a password reset link has been sent.";
 
-    /*
-      Never reveal whether an email exists.
-    */
+   
 
     if (!user) {
       return res.status(200).json({
@@ -495,9 +474,7 @@ This link expires in 10 minutes.`,
   }
 };
 
-/* =========================================================
-   RESET PASSWORD
-========================================================= */
+
 
 export const resetpassword = async function (
   req: Request,
@@ -532,9 +509,6 @@ export const resetpassword = async function (
       throw new AppError("Passwords do not match.", 400);
     }
 
-    /*
-      User model pre-save hook hashes the password.
-    */
 
     user.password = password;
 

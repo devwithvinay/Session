@@ -9,13 +9,10 @@ export interface IFocusSession {
   pausedAt?: Date;
   endTime?: Date;
 
-  // focus | short break | long break
   mode: "focus" | "short" | "long";
 
-  // Planned duration in seconds
   targetDuration: number;
 
-  // Total actual duration in seconds
   duration: number;
 
   status: "active" | "paused" | "completed" | "cancelled";
@@ -34,13 +31,11 @@ const focusSessionSchema = new mongoose.Schema<IFocusSession>(
       required: true,
     },
 
-    // When the current active period started
     activeStartTime: {
       type: Date,
       required: true,
     },
 
-    // Set only while paused
     pausedAt: {
       type: Date,
     },
@@ -49,7 +44,6 @@ const focusSessionSchema = new mongoose.Schema<IFocusSession>(
       type: Date,
     },
 
-    // Session type
     mode: {
       type: String,
       enum: ["focus", "short", "long"],
@@ -57,7 +51,6 @@ const focusSessionSchema = new mongoose.Schema<IFocusSession>(
       required: true,
     },
 
-    // Planned duration in seconds
     targetDuration: {
       type: Number,
       required: true,
@@ -65,7 +58,6 @@ const focusSessionSchema = new mongoose.Schema<IFocusSession>(
       max: 120 * 60,
     },
 
-    // Total actual duration in seconds
     duration: {
       type: Number,
       default: 0,
@@ -86,33 +78,22 @@ const focusSessionSchema = new mongoose.Schema<IFocusSession>(
   },
 );
 
-// Session history
 focusSessionSchema.index({
   user: 1,
   startTime: -1,
 });
 
-// Find active/paused sessions
 focusSessionSchema.index({
   user: 1,
   status: 1,
 });
 
-// Analytics queries
 focusSessionSchema.index({
   user: 1,
   mode: 1,
   status: 1,
 });
 
-/*
- * IMPORTANT:
- *
- * A user can have only ONE active/paused session.
- *
- * This database-level constraint protects against
- * concurrent requests creating multiple active sessions.
- */
 focusSessionSchema.index(
   { user: 1 },
   {

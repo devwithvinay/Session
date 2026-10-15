@@ -23,12 +23,10 @@ const getPreviousDay = (dateString: string) => {
 };
 
 export const calculateStreaks = (sessions: IFocusSession[]) => {
-  // Only completed sessions count.
   const completedSessions = sessions.filter(
     (session) => session.status === "completed",
   );
 
-  // Get unique focus-session days in IST.
   const uniqueDays = [
     ...new Set(completedSessions.map((session) => getDay(session.startTime))),
   ].sort();
@@ -40,7 +38,6 @@ export const calculateStreaks = (sessions: IFocusSession[]) => {
     };
   }
 
-  // Calculate current streak.
   const today = getDay(new Date());
 
   let currentStreak = 0;
@@ -61,7 +58,6 @@ export const calculateStreaks = (sessions: IFocusSession[]) => {
     }
   }
 
-  // Calculate best streak.
   let bestStreak = 1;
   let streak = 1;
 

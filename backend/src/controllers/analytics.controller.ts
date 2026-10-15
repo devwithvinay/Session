@@ -19,21 +19,8 @@ const getStartOfDay = (dateString: string) => {
 const getStartOfNextDay = (dateString: string) => {
   const startOfDay = getStartOfDay(dateString);
 
-  // India has no daylight-saving changes,
-  // so exactly 24 hours is the correct next-day boundary.
   return new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000);
 };
-
-/*
- * Analytics counts:
- *
- * 1. New sessions with mode: "focus"
- * 2. Old sessions created before the mode field existed
- *
- * Short and long breaks are excluded.
- *
- * This means old completed sessions remain visible in Analytics.
- */
 
 const isFocusSession = (session: { mode?: "focus" | "short" | "long" }) => {
   return session.mode !== "short" && session.mode !== "long";
@@ -56,12 +43,6 @@ export const getAnalytics = async function (req: Request, res: Response) {
 
     const startOfTomorrow = getStartOfNextDay(todayString);
 
-    /*
-     * Fetch all completed sessions today.
-     *
-     * We intentionally do NOT filter by mode in MongoDB
-     * because old sessions may not have a mode field.
-     */
     const completedTodaySessions = await FocusSession.find({
       user: userId,
       status: "completed",
@@ -71,47 +52,28 @@ export const getAnalytics = async function (req: Request, res: Response) {
       },
     });
 
-    /*
-     * Only Focus sessions count.
-     *
-     * Old sessions with undefined mode are treated as Focus.
-     */
     const todaySessions = completedTodaySessions.filter(isFocusSession);
 
-    /*
-     * Fetch all completed sessions.
-     *
-     * Again, don't filter mode in MongoDB because legacy
-     * sessions may not contain the mode field.
-     */
     const completedSessions = await FocusSession.find({
       user: userId,
       status: "completed",
     });
 
-    /*
-     * Keep Focus sessions and legacy sessions.
-     * Exclude only short and long breaks.
-     */
     const allSessions = completedSessions.filter(isFocusSession);
 
-    // Today's total focus time.
     const todayTime = todaySessions.reduce(
       (total, session) => total + Number(session.duration || 0),
       0,
     );
 
-    // All-time total focus time.
     const totalTime = allSessions.reduce(
       (total, session) => total + Number(session.duration || 0),
       0,
     );
 
-    // Average completed focus session duration.
     const averageTime =
       allSessions.length > 0 ? Math.floor(totalTime / allSessions.length) : 0;
 
-    // Current and best focus streak.
     const { currentStreak, bestStreak } = calculateStreaks(allSessions);
 
     return res.status(200).json({
@@ -147,12 +109,6 @@ export const getDailyFocus = async function (req: Request, res: Response) {
       });
     }
 
-    /*
-     * We cannot safely filter mode in MongoDB because
-     * legacy sessions may not have a mode field.
-     *
-     * So aggregate all completed sessions first.
-     */
     const dailyFocus = await FocusSession.aggregate([
       {
         $match: {
@@ -161,11 +117,6 @@ export const getDailyFocus = async function (req: Request, res: Response) {
         },
       },
 
-      /*
-       * Treat missing mode as "focus".
-       *
-       * Exclude only explicit short/long sessions.
-       */
       {
         $match: {
           $or: [

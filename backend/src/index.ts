@@ -1,32 +1,27 @@
-import express from "express"
-import dotenv from "dotenv"
-import cors from "cors"
+import express from "express";
+import dotenv from "dotenv";
+import cors from "cors";
 import connectDB from "./utils/db.js";
 import cookieParser from "cookie-parser";
-// routes 
-import userRoutes from "./routes/auth.route.js"
-import sessionRoutes from "./routes/session.route.js"
-import analyticsRoutes from "./routes/analytics.routes.js"
+import userRoutes from "./routes/auth.route.js";
+import sessionRoutes from "./routes/session.route.js";
+import analyticsRoutes from "./routes/analytics.routes.js";
 import leaderBoardRoute from "./routes/leaderboard.route.js";
 import { errorHandler } from "./middleware/error.middleware.js";
 import taskRoutes from "./routes/task.routes.js";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 
-
-
-
 dotenv.config();
 
 const app = express();
 app.use(helmet());
 
+const port = Number(process.env.PORT) || 8080;
 
-const port = Number(process.env.PORT) || 8080
-
-app.use(express.json())
-app.use(express.urlencoded({extended:true}))
-app.use(cookieParser())
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 app.use(
   cors({
@@ -41,24 +36,20 @@ const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
   message: {
-    message: "Too many attemps",
-    success:false
-  }
+    message: "Too many attempts",
+    success: false,
+  },
 });
 
-app.use(limiter)
+app.use(limiter);
 
-
-// db connect 
 connectDB();
 
-//routes
-app.use("/api/v1/users",userRoutes)
-app.use("/api/v1/session",sessionRoutes)
-app.use("/api/v1/analytics",analyticsRoutes)
-app.use("/api/v1/leaderboard",leaderBoardRoute)
-app.use("/api/v1/tasks", taskRoutes)
-
+app.use("/api/v1/users", userRoutes);
+app.use("/api/v1/session", sessionRoutes);
+app.use("/api/v1/analytics", analyticsRoutes);
+app.use("/api/v1/leaderboard", leaderBoardRoute);
+app.use("/api/v1/tasks", taskRoutes);
 
 app.use((req, res) => {
   return res.status(404).json({
@@ -67,9 +58,7 @@ app.use((req, res) => {
   });
 });
 
-// global error handle
-
-app.use(errorHandler)
+app.use(errorHandler);
 
 app.listen(port, "0.0.0.0", () => {
   console.log(`Server is running on port ${port}`);

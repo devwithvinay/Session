@@ -17,24 +17,20 @@ export const loggedIn = function (
   try {
     const token = req.cookies?.token;
 
-    // No token
     if (!token) {
       throw new AppError("Authentication required. Please login.", 401);
     }
 
     const JWT_SECRET = process.env.JWT_SECRET;
 
-    // Server configuration error
     if (!JWT_SECRET) {
       console.error("JWT_SECRET is missing from environment variables");
 
       throw new AppError("Authentication service is not configured.", 500);
     }
 
-    // Verify token
     const decoded = jwt.verify(token, JWT_SECRET);
 
-    // Validate payload
     if (
       typeof decoded !== "object" ||
       decoded === null ||
