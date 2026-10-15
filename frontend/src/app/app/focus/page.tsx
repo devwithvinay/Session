@@ -1,12 +1,6 @@
-
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useState,
-  type ReactNode,
-} from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { apiFetch } from "../../../lib/api";
 
 type Mode = "focus" | "short" | "long";
@@ -63,9 +57,7 @@ export default function FocusPage() {
 
   const [sessionId, setSessionId] = useState<string | null>(null);
 
-  const [status, setStatus] = useState<
-    "idle" | "active" | "paused"
-  >("idle");
+  const [status, setStatus] = useState<"idle" | "active" | "paused">("idle");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -73,51 +65,28 @@ export default function FocusPage() {
   const [todayFocus, setTodayFocus] = useState(0);
   const [todaySessions, setTodaySessions] = useState(0);
 
-  const [currentTask, setCurrentTask] =
-    useState("No active task");
+  const [currentTask, setCurrentTask] = useState("No active task");
 
-  /*
-   * Fetch current task
-   *
-   * Priority:
-   * 1. First incomplete task due today
-   * 2. If none, first incomplete task
-   */
   const fetchCurrentTask = useCallback(async () => {
     try {
-      const response =
-        await apiFetch<TasksResponse>("/tasks");
+      const response = await apiFetch<TasksResponse>("/tasks");
 
-      const incompleteTasks = response.tasks.filter(
-        (task) => !task.completed,
-      );
+      const incompleteTasks = response.tasks.filter((task) => !task.completed);
 
-      const todayTask = incompleteTasks.find((task) =>
-        isToday(task.dueDate),
-      );
+      const todayTask = incompleteTasks.find((task) => isToday(task.dueDate));
 
-      const activeTask =
-        todayTask ?? incompleteTasks[0];
+      const activeTask = todayTask ?? incompleteTasks[0];
 
-      setCurrentTask(
-        activeTask?.title ?? "No active task",
-      );
+      setCurrentTask(activeTask?.title ?? "No active task");
     } catch (err) {
-      console.error(
-        "Failed to fetch current task:",
-        err,
-      );
+      console.error("Failed to fetch current task:", err);
     }
   }, []);
 
-  /*
-   * Restore active / paused session
-   */
   useEffect(() => {
     const restoreSession = async () => {
       try {
-        const response =
-          await apiFetch<SessionResponse>("/session");
+        const response = await apiFetch<SessionResponse>("/session");
 
         if (!response?.session) {
           return;
@@ -125,8 +94,7 @@ export default function FocusPage() {
 
         const session = response.session;
 
-        const sessionMode: Mode =
-          session.mode ?? "focus";
+        const sessionMode: Mode = session.mode ?? "focus";
 
         const targetDuration =
           Number(session.targetDuration) > 0
@@ -144,79 +112,45 @@ export default function FocusPage() {
           setStatus("active");
         }
 
-        let elapsedSeconds =
-          Number(session.duration) || 0;
+        let elapsedSeconds = Number(session.duration) || 0;
 
         if (session.status === "active") {
-          const activeStart = new Date(
-            session.activeStartTime,
-          ).getTime();
+          const activeStart = new Date(session.activeStartTime).getTime();
 
           const now = Date.now();
 
-          const activeElapsed = Math.floor(
-            (now - activeStart) / 1000,
-          );
+          const activeElapsed = Math.floor((now - activeStart) / 1000);
 
-          elapsedSeconds += Math.max(
-            0,
-            activeElapsed,
-          );
+          elapsedSeconds += Math.max(0, activeElapsed);
         }
 
-        const remaining = Math.max(
-          0,
-          targetDuration - elapsedSeconds,
-        );
+        const remaining = Math.max(0, targetDuration - elapsedSeconds);
 
         setSecondsLeft(remaining);
       } catch (err) {
-        console.error(
-          "Failed to restore session:",
-          err,
-        );
+        console.error("Failed to restore session:", err);
       }
     };
 
     restoreSession();
   }, []);
 
-  /*
-   * Fetch analytics
-   */
   useEffect(() => {
     const fetchTodayAnalytics = async () => {
       try {
-        const response =
-          await apiFetch<AnalyticsResponse>(
-            "/analytics",
-          );
+        const response = await apiFetch<AnalyticsResponse>("/analytics");
 
-        setTodayFocus(
-          Number(response.analytics.todayTime) || 0,
-        );
+        setTodayFocus(Number(response.analytics.todayTime) || 0);
 
-        setTodaySessions(
-          Number(response.analytics.todaySessions) || 0,
-        );
+        setTodaySessions(Number(response.analytics.todaySessions) || 0);
       } catch (err) {
-        console.error(
-          "Failed to fetch today's analytics:",
-          err,
-        );
+        console.error("Failed to fetch today's analytics:", err);
       }
     };
 
     fetchTodayAnalytics();
   }, []);
 
-  /*
-   * Initial current task fetch
-   *
-   * Also listen for task updates from:
-   * - Dashboard
-   * - Tasks page
-   */
   useEffect(() => {
     fetchCurrentTask();
 
@@ -224,22 +158,13 @@ export default function FocusPage() {
       fetchCurrentTask();
     };
 
-    window.addEventListener(
-      "task-updated",
-      handleTaskUpdated,
-    );
+    window.addEventListener("task-updated", handleTaskUpdated);
 
     return () => {
-      window.removeEventListener(
-        "task-updated",
-        handleTaskUpdated,
-      );
+      window.removeEventListener("task-updated", handleTaskUpdated);
     };
   }, [fetchCurrentTask]);
 
-  /*
-   * Timer
-   */
   useEffect(() => {
     if (status !== "active") {
       return;
@@ -259,22 +184,12 @@ export default function FocusPage() {
     return () => clearInterval(timer);
   }, [status]);
 
-  /*
-   * Auto complete
-   */
   useEffect(() => {
-    if (
-      secondsLeft === 0 &&
-      sessionId &&
-      status === "active"
-    ) {
+    if (secondsLeft === 0 && sessionId && status === "active") {
       completeSession();
     }
   }, [secondsLeft, sessionId, status]);
 
-  /*
-   * Start
-   */
   const startSession = async () => {
     if (loading || sessionId) {
       return;
@@ -286,41 +201,26 @@ export default function FocusPage() {
 
       const targetDuration = minutes * 60;
 
-      const response =
-        await apiFetch<SessionResponse>(
-          "/session/start",
-          {
-            method: "POST",
-            body: JSON.stringify({
-              mode,
-              targetDuration,
-            }),
-          },
-        );
+      const response = await apiFetch<SessionResponse>("/session/start", {
+        method: "POST",
+        body: JSON.stringify({
+          mode,
+          targetDuration,
+        }),
+      });
 
       setSessionId(response.session._id);
       setStatus("active");
       setSecondsLeft(targetDuration);
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Unable to start session",
-      );
+      setError(err instanceof Error ? err.message : "Unable to start session");
     } finally {
       setLoading(false);
     }
   };
 
-  /*
-   * Pause
-   */
   const pauseSession = async () => {
-    if (
-      !sessionId ||
-      loading ||
-      status !== "active"
-    ) {
+    if (!sessionId || loading || status !== "active") {
       return;
     }
 
@@ -328,34 +228,20 @@ export default function FocusPage() {
       setLoading(true);
       setError("");
 
-      await apiFetch<SessionResponse>(
-        `/session/${sessionId}/pause`,
-        {
-          method: "PATCH",
-        },
-      );
+      await apiFetch<SessionResponse>(`/session/${sessionId}/pause`, {
+        method: "PATCH",
+      });
 
       setStatus("paused");
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Unable to pause session",
-      );
+      setError(err instanceof Error ? err.message : "Unable to pause session");
     } finally {
       setLoading(false);
     }
   };
 
-  /*
-   * Resume
-   */
   const resumeSession = async () => {
-    if (
-      !sessionId ||
-      loading ||
-      status !== "paused"
-    ) {
+    if (!sessionId || loading || status !== "paused") {
       return;
     }
 
@@ -363,28 +249,18 @@ export default function FocusPage() {
       setLoading(true);
       setError("");
 
-      await apiFetch<SessionResponse>(
-        `/session/${sessionId}/resume`,
-        {
-          method: "PATCH",
-        },
-      );
+      await apiFetch<SessionResponse>(`/session/${sessionId}/resume`, {
+        method: "PATCH",
+      });
 
       setStatus("active");
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Unable to resume session",
-      );
+      setError(err instanceof Error ? err.message : "Unable to resume session");
     } finally {
       setLoading(false);
     }
   };
 
-  /*
-   * Complete
-   */
   const completeSession = async () => {
     if (!sessionId || loading) {
       return;
@@ -394,55 +270,30 @@ export default function FocusPage() {
       setLoading(true);
       setError("");
 
-      await apiFetch<SessionResponse>(
-        `/session/${sessionId}/complete`,
-        {
-          method: "PATCH",
-        },
-      );
+      await apiFetch<SessionResponse>(`/session/${sessionId}/complete`, {
+        method: "PATCH",
+      });
 
-      /*
-       * Analytics counts only completed Focus
-       * sessions. The backend handles that filtering.
-       */
-      const analyticsResponse =
-        await apiFetch<AnalyticsResponse>(
-          "/analytics",
-        );
+      const analyticsResponse = await apiFetch<AnalyticsResponse>("/analytics");
 
-      setTodayFocus(
-        Number(
-          analyticsResponse.analytics.todayTime,
-        ) || 0,
-      );
+      setTodayFocus(Number(analyticsResponse.analytics.todayTime) || 0);
 
-      setTodaySessions(
-        Number(
-          analyticsResponse.analytics.todaySessions,
-        ) || 0,
-      );
+      setTodaySessions(Number(analyticsResponse.analytics.todaySessions) || 0);
 
       setSessionId(null);
       setStatus("idle");
       setSecondsLeft(minutes * 60);
 
-      window.dispatchEvent(
-        new Event("session-completed"),
-      );
+      window.dispatchEvent(new Event("session-completed"));
     } catch (err) {
       setError(
-        err instanceof Error
-          ? err.message
-          : "Unable to complete session",
+        err instanceof Error ? err.message : "Unable to complete session",
       );
     } finally {
       setLoading(false);
     }
   };
 
-  /*
-   * Stop / Cancel
-   */
   const stopSession = async () => {
     if (!sessionId || loading) {
       return;
@@ -452,47 +303,31 @@ export default function FocusPage() {
       setLoading(true);
       setError("");
 
-      await apiFetch<SessionResponse>(
-        `/session/${sessionId}/cancel`,
-        {
-          method: "PATCH",
-        },
-      );
+      await apiFetch<SessionResponse>(`/session/${sessionId}/cancel`, {
+        method: "PATCH",
+      });
 
       setSessionId(null);
       setStatus("idle");
       setSecondsLeft(minutes * 60);
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Unable to stop session",
-      );
+      setError(err instanceof Error ? err.message : "Unable to stop session");
     } finally {
       setLoading(false);
     }
   };
 
-  /*
-   * Change timer
-   */
   const adjustTime = (amount: number) => {
     if (status !== "idle" || sessionId) {
       return;
     }
 
-    const nextMinutes = Math.min(
-      120,
-      Math.max(5, minutes + amount),
-    );
+    const nextMinutes = Math.min(120, Math.max(5, minutes + amount));
 
     setMinutes(nextMinutes);
     setSecondsLeft(nextMinutes * 60);
   };
 
-  /*
-   * Change mode
-   */
   const changeMode = (nextMode: Mode) => {
     if (status !== "idle" || sessionId) {
       return;
@@ -506,9 +341,6 @@ export default function FocusPage() {
     setSecondsLeft(nextMinutes * 60);
   };
 
-  /*
-   * Reset
-   */
   const resetTimer = () => {
     if (sessionId || loading) {
       return;
@@ -518,30 +350,20 @@ export default function FocusPage() {
     setSecondsLeft(minutes * 60);
   };
 
-  /*
-   * Format timer
-   */
   const formatTime = () => {
     const mins = Math.floor(secondsLeft / 60)
       .toString()
       .padStart(2, "0");
 
-    const secs = (secondsLeft % 60)
-      .toString()
-      .padStart(2, "0");
+    const secs = (secondsLeft % 60).toString().padStart(2, "0");
 
     return `${mins}:${secs}`;
   };
 
-  /*
-   * Format focus time
-   */
   const formatFocusTime = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
 
-    const minutesValue = Math.floor(
-      (seconds % 3600) / 60,
-    );
+    const minutesValue = Math.floor((seconds % 3600) / 60);
 
     if (hours > 0) {
       return `${hours}h ${minutesValue}m`;
@@ -553,23 +375,14 @@ export default function FocusPage() {
   const totalSeconds = minutes * 60;
 
   const progress =
-    totalSeconds > 0
-      ? ((totalSeconds - secondsLeft) /
-          totalSeconds) *
-        100
-      : 0;
+    totalSeconds > 0 ? ((totalSeconds - secondsLeft) / totalSeconds) * 100 : 0;
 
   const statusLabel =
-    status === "active"
-      ? "Focusing"
-      : status === "paused"
-        ? "Paused"
-        : "Ready";
+    status === "active" ? "Focusing" : status === "paused" ? "Paused" : "Ready";
 
   return (
     <div className="min-h-screen px-5 py-8 text-white md:px-8 lg:px-10">
       <div className="mx-auto w-full max-w-[1180px]">
-        {/* Header */}
         <div className="mb-8">
           <p className="text-sm font-medium uppercase tracking-[0.2em] text-white/40">
             Focus
@@ -579,14 +392,10 @@ export default function FocusPage() {
             Focus Timer
           </h1>
 
-          <p className="mt-2 text-white/50">
-            Deep work starts here.
-          </p>
+          <p className="mt-2 text-white/50">Deep work starts here.</p>
         </div>
 
-        {/* Main Card */}
         <div className="rounded-[30px] border border-white/20 bg-white/[0.075] p-6 shadow-2xl shadow-black/20 backdrop-blur-2xl md:p-10">
-          {/* Mode selector */}
           <div className="flex justify-center">
             <div className="flex rounded-full border border-white/10 bg-black/10 p-1">
               <ModeButton
@@ -615,7 +424,6 @@ export default function FocusPage() {
             </div>
           </div>
 
-          {/* Timer */}
           <div className="mx-auto mt-10 flex max-w-[620px] flex-col items-center">
             <div className="relative flex h-[300px] w-[300px] items-center justify-center md:h-[360px] md:w-[360px]">
               <svg
@@ -640,12 +448,7 @@ export default function FocusPage() {
                   strokeWidth="8"
                   strokeLinecap="round"
                   strokeDasharray={2 * Math.PI * 158}
-                  strokeDashoffset={
-                    2 *
-                    Math.PI *
-                    158 *
-                    (1 - progress / 100)
-                  }
+                  strokeDashoffset={2 * Math.PI * 158 * (1 - progress / 100)}
                   className="transition-all duration-500"
                 />
               </svg>
@@ -659,14 +462,10 @@ export default function FocusPage() {
                   {formatTime()}
                 </div>
 
-                {/* Time adjustment */}
                 <div className="mt-5 flex items-center gap-3">
                   <button
                     onClick={() => adjustTime(-5)}
-                    disabled={
-                      status !== "idle" ||
-                      minutes <= 5
-                    }
+                    disabled={status !== "idle" || minutes <= 5}
                     className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/[0.06] text-lg text-white/70 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-30"
                   >
                     −
@@ -678,10 +477,7 @@ export default function FocusPage() {
 
                   <button
                     onClick={() => adjustTime(5)}
-                    disabled={
-                      status !== "idle" ||
-                      minutes >= 120
-                    }
+                    disabled={status !== "idle" || minutes >= 120}
                     className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/[0.06] text-lg text-white/70 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-30"
                   >
                     +
@@ -690,7 +486,6 @@ export default function FocusPage() {
               </div>
             </div>
 
-            {/* Main controls */}
             <div className="mt-6 flex items-center gap-3">
               {status === "idle" && (
                 <button
@@ -698,9 +493,7 @@ export default function FocusPage() {
                   disabled={loading}
                   className="rounded-full bg-white px-8 py-3 font-medium text-slate-900 shadow-lg transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {loading
-                    ? "Starting..."
-                    : "Start Focus"}
+                  {loading ? "Starting..." : "Start Focus"}
                 </button>
               )}
 
@@ -710,9 +503,7 @@ export default function FocusPage() {
                   disabled={loading}
                   className="rounded-full bg-white px-8 py-3 font-medium text-slate-900 shadow-lg transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {loading
-                    ? "Pausing..."
-                    : "Pause"}
+                  {loading ? "Pausing..." : "Pause"}
                 </button>
               )}
 
@@ -722,9 +513,7 @@ export default function FocusPage() {
                   disabled={loading}
                   className="rounded-full bg-white px-8 py-3 font-medium text-slate-900 shadow-lg transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {loading
-                    ? "Resuming..."
-                    : "Resume"}
+                  {loading ? "Resuming..." : "Resume"}
                 </button>
               )}
 
@@ -734,9 +523,7 @@ export default function FocusPage() {
                   disabled={loading}
                   className="rounded-full border border-red-300/20 bg-red-400/10 px-6 py-3 text-sm text-red-100 transition hover:bg-red-400/20 disabled:opacity-40"
                 >
-                  {loading
-                    ? "Stopping..."
-                    : "Stop"}
+                  {loading ? "Stopping..." : "Stop"}
                 </button>
               )}
 
@@ -751,14 +538,12 @@ export default function FocusPage() {
               )}
             </div>
 
-            {/* Error */}
             {error && (
               <p className="mt-5 rounded-xl border border-red-400/20 bg-red-400/10 px-4 py-2 text-sm text-red-200">
                 {error}
               </p>
             )}
 
-            {/* Server status */}
             {sessionId && (
               <p className="mt-4 text-xs text-white/30">
                 Session synced with server
@@ -766,22 +551,15 @@ export default function FocusPage() {
             )}
           </div>
 
-          {/* Info cards */}
           <div className="mt-12 grid gap-4 md:grid-cols-3">
-            <InfoCard
-              label="Current Task"
-              value={currentTask}
-            />
+            <InfoCard label="Current Task" value={currentTask} />
 
             <InfoCard
               label="Today's Focus"
               value={formatFocusTime(todayFocus)}
             />
 
-            <InfoCard
-              label="Sessions"
-              value={todaySessions.toString()}
-            />
+            <InfoCard label="Sessions" value={todaySessions.toString()} />
           </div>
         </div>
       </div>
@@ -805,9 +583,7 @@ function ModeButton({
       onClick={onClick}
       disabled={disabled}
       className={`rounded-full px-4 py-2 text-sm transition ${
-        active
-          ? "bg-white text-slate-900"
-          : "text-white/50 hover:text-white"
+        active ? "bg-white text-slate-900" : "text-white/50 hover:text-white"
       } disabled:cursor-not-allowed disabled:opacity-40`}
     >
       {children}
@@ -815,22 +591,14 @@ function ModeButton({
   );
 }
 
-function InfoCard({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
+function InfoCard({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-2xl border border-white/10 bg-white/[0.045] p-5">
       <p className="text-xs uppercase tracking-[0.15em] text-white/35">
         {label}
       </p>
 
-      <p className="mt-3 text-lg font-medium text-white/85">
-        {value}
-      </p>
+      <p className="mt-3 text-lg font-medium text-white/85">{value}</p>
     </div>
   );
 }
@@ -840,11 +608,6 @@ function isToday(date?: string) {
     return false;
   }
 
-  /*
-   * Compare YYYY-MM-DD directly.
-   * This avoids timezone shifting when the backend
-   * returns a date such as "2026-10-05".
-   */
   const taskDate = date.slice(0, 10);
 
   const today = new Date();
@@ -857,4 +620,3 @@ function isToday(date?: string) {
 
   return taskDate === todayString;
 }
-

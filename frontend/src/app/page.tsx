@@ -11,7 +11,6 @@ import Footer from "@/components/Footer";
 export default function Home() {
   return (
     <main>
-      {/* HERO */}
       <section className="relative min-h-screen">
         <Image
           src="/images/background.png"
@@ -29,16 +28,12 @@ export default function Home() {
         </div>
       </section>
 
-      {/* DASHBOARD */}
       <Dashboard />
 
-      {/* FEATURES */}
       <Features />
 
-      {/* LEADERBOARD */}
       <Leaderboard />
 
-      {/* FOOTER */}
       <Footer />
     </main>
   );

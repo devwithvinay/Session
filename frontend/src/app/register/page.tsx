@@ -56,7 +56,6 @@ export default function RegisterPage() {
         backgroundPosition: "center",
       }}
     >
-      {/* Background */}
       <div className="pointer-events-none absolute inset-0 bg-black/[0.03]" />
 
       <div className="pointer-events-none absolute left-[-120px] top-[-120px] h-[400px] w-[400px] rounded-full bg-white/20 blur-3xl" />
@@ -64,7 +63,6 @@ export default function RegisterPage() {
       <div className="pointer-events-none absolute bottom-[-150px] right-[-100px] h-[400px] w-[400px] rounded-full bg-sky-200/20 blur-3xl" />
 
       <div className="relative z-10 w-full max-w-[430px]">
-        {/* Brand */}
         <div className="mb-7 text-center">
           <Link
             href="/"
@@ -78,14 +76,12 @@ export default function RegisterPage() {
           </p>
         </div>
 
-        {/* Glass card */}
         <div className="relative overflow-hidden rounded-[30px] border border-white/40 bg-white/[0.18] p-7 shadow-[0_25px_80px_rgba(0,0,0,0.25)] backdrop-blur-2xl sm:p-9">
           <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/80" />
 
           <div className="pointer-events-none absolute -right-24 -top-24 h-48 w-48 rounded-full bg-white/20 blur-3xl" />
 
           <div className="relative z-10">
-            {/* Heading */}
             <div>
               <h1 className="text-2xl font-semibold tracking-[-0.04em] text-white drop-shadow">
                 Create account
@@ -96,7 +92,6 @@ export default function RegisterPage() {
               </p>
             </div>
 
-            {/* Google */}
             <button
               type="button"
               className="mt-7 flex h-12 w-full items-center justify-center gap-3 rounded-xl border border-white/30 bg-white/20 text-sm font-medium text-white backdrop-blur-md transition hover:bg-white/30"
@@ -127,7 +122,6 @@ export default function RegisterPage() {
               Continue with Google
             </button>
 
-            {/* Divider */}
             <div className="my-7 flex items-center gap-4">
               <div className="h-px flex-1 bg-white/20" />
 
@@ -138,16 +132,13 @@ export default function RegisterPage() {
               <div className="h-px flex-1 bg-white/20" />
             </div>
 
-            {/* Error */}
             {error && (
               <div className="mb-5 rounded-xl border border-red-300/30 bg-red-500/15 px-4 py-3 text-sm text-white">
                 {error}
               </div>
             )}
 
-            {/* Form */}
             <form onSubmit={handleRegister} className="space-y-5">
-              {/* Username */}
               <div>
                 <label
                   htmlFor="username"
@@ -168,7 +159,6 @@ export default function RegisterPage() {
                 />
               </div>
 
-              {/* Email */}
               <div>
                 <label
                   htmlFor="email"
@@ -188,7 +178,6 @@ export default function RegisterPage() {
                 />
               </div>
 
-              {/* Password */}
               <div>
                 <label
                   htmlFor="password"
@@ -219,7 +208,6 @@ export default function RegisterPage() {
                 </div>
               </div>
 
-              {/* Submit */}
               <button
                 type="submit"
                 disabled={loading}
@@ -229,7 +217,6 @@ export default function RegisterPage() {
               </button>
             </form>
 
-            {/* Login */}
             <p className="mt-7 text-center text-sm text-white/70">
               Already have an account?{" "}
               <Link
@@ -242,7 +229,6 @@ export default function RegisterPage() {
           </div>
         </div>
 
-        {/* Bottom text */}
         <p className="mt-6 text-center text-xs text-white/60">
           By creating an account, you agree to Session&apos;s Terms and Privacy
           Policy.

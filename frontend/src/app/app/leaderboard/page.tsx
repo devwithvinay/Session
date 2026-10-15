@@ -62,7 +62,6 @@ export default function LeaderboardPage() {
   return (
     <div className="min-h-screen px-5 py-8 text-white md:px-8 lg:px-10">
       <div className="mx-auto w-full max-w-[1180px]">
-        {/* Header */}
         <div className="mb-8">
           <p className="text-sm font-medium uppercase tracking-[0.2em] text-white/40">
             Community
@@ -105,14 +104,12 @@ export default function LeaderboardPage() {
 
         {!loading && !error && users.length > 0 && (
           <>
-            {/* Top 3 */}
             <div className="grid gap-4 md:grid-cols-3">
               {topThree.map((user) => (
                 <TopUser key={user.userId} user={user} />
               ))}
             </div>
 
-            {/* Rankings */}
             {remainingUsers.length > 0 && (
               <div className="mt-6 overflow-hidden rounded-[28px] border border-white/15 bg-white/[0.07] shadow-2xl shadow-black/20 backdrop-blur-2xl">
                 <div className="hidden grid-cols-[80px_1fr_180px_150px] border-b border-white/10 px-6 py-4 text-xs uppercase tracking-[0.15em] text-white/35 md:grid">

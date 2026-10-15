@@ -38,9 +38,6 @@ export default function AnalyticsPage() {
 
   const [error, setError] = useState("");
 
-  /*
-   * Load all analytics data.
-   */
   const loadAnalytics = useCallback(async () => {
     try {
       setLoading(true);
@@ -61,10 +58,6 @@ export default function AnalyticsPage() {
         ? dailyResponse.dailyFocus
         : [];
 
-      /*
-       * Always keep daily activity
-       * in chronological order.
-       */
       const sortedDailyFocus = [...safeDailyFocus].sort((a, b) =>
         a.date.localeCompare(b.date),
       );
@@ -97,17 +90,10 @@ export default function AnalyticsPage() {
     }
   }, []);
 
-  /*
-   * Initial load.
-   */
   useEffect(() => {
     loadAnalytics();
   }, [loadAnalytics]);
 
-  /*
-   * Keep Analytics synchronized with
-   * Focus and Task pages.
-   */
   useEffect(() => {
     const handleDataUpdate = () => {
       loadAnalytics();
@@ -124,10 +110,6 @@ export default function AnalyticsPage() {
     };
   }, [loadAnalytics]);
 
-  /*
-   * Also refresh when the Analytics
-   * tab becomes visible again.
-   */
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
@@ -156,9 +138,6 @@ export default function AnalyticsPage() {
     return `${minutes}m`;
   };
 
-  /*
-   * Maximum daily focus value.
-   */
   const maxFocusTime = useMemo(() => {
     if (dailyFocus.length === 0) {
       return 1;
@@ -167,10 +146,6 @@ export default function AnalyticsPage() {
     return Math.max(...dailyFocus.map((item) => item.totalDuration), 1);
   }, [dailyFocus]);
 
-  /*
-   * Format a backend date without
-   * timezone conversion.
-   */
   const formatDate = (dateString: string) => {
     const [year, month, day] = dateString.slice(0, 10).split("-").map(Number);
 
@@ -185,10 +160,6 @@ export default function AnalyticsPage() {
     });
   };
 
-  /*
-   * Format weekday without timezone
-   * shifting.
-   */
   const formatWeekday = (dateString: string) => {
     const [year, month, day] = dateString.slice(0, 10).split("-").map(Number);
 
@@ -237,7 +208,6 @@ export default function AnalyticsPage() {
   return (
     <div className="min-h-screen px-5 py-8 text-white md:px-8 lg:px-10">
       <div className="mx-auto w-full max-w-[1180px]">
-        {/* Header */}
         <div className="mb-8">
           <p className="text-sm font-medium uppercase tracking-[0.2em] text-white/40">
             Insights
@@ -252,7 +222,6 @@ export default function AnalyticsPage() {
           </p>
         </div>
 
-        {/* Stats */}
         <div className="grid gap-4 md:grid-cols-4">
           <StatCard label="Today" value={formatDuration(analytics.todayTime)} />
 
@@ -272,7 +241,6 @@ export default function AnalyticsPage() {
           />
         </div>
 
-        {/* Best streak */}
         <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.045] px-5 py-4 backdrop-blur-xl">
           <div className="flex items-center justify-between">
             <span className="text-sm text-white/40">Best streak</span>
@@ -283,7 +251,6 @@ export default function AnalyticsPage() {
           </div>
         </div>
 
-        {/* Focus chart */}
         <div className="mt-6 rounded-[28px] border border-white/15 bg-white/[0.07] p-6 shadow-2xl shadow-black/20 backdrop-blur-2xl md:p-8">
           <div>
             <p className="text-xs uppercase tracking-[0.18em] text-white/35">
@@ -333,7 +300,6 @@ export default function AnalyticsPage() {
           )}
         </div>
 
-        {/* Daily breakdown */}
         <div className="mt-6 rounded-[28px] border border-white/15 bg-white/[0.07] p-6 shadow-2xl shadow-black/20 backdrop-blur-2xl md:p-8">
           <div>
             <p className="text-xs uppercase tracking-[0.18em] text-white/35">

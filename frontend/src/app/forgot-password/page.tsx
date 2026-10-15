@@ -12,7 +12,6 @@ export default function ForgotPasswordPage() {
 
     if (!email) return;
 
-    // Later, connect this to your authentication backend.
     setSent(true);
   };
 
@@ -31,7 +30,6 @@ export default function ForgotPasswordPage() {
         backgroundPosition: "center",
       }}
     >
-      {/* Background overlays */}
       <div className="pointer-events-none absolute inset-0 bg-black/[0.03]" />
 
       <div className="pointer-events-none absolute left-[-120px] top-[-120px] h-[400px] w-[400px] rounded-full bg-white/20 blur-3xl" />
@@ -39,7 +37,6 @@ export default function ForgotPasswordPage() {
       <div className="pointer-events-none absolute bottom-[-150px] right-[-100px] h-[400px] w-[400px] rounded-full bg-sky-200/20 blur-3xl" />
 
       <div className="relative z-10 w-full max-w-[430px]">
-        {/* Brand */}
         <div className="mb-7 text-center">
           <Link
             href="/"
@@ -53,9 +50,7 @@ export default function ForgotPasswordPage() {
           </p>
         </div>
 
-        {/* Card */}
         <div className="relative overflow-hidden rounded-[30px] border border-white/40 bg-white/[0.18] p-7 shadow-[0_25px_80px_rgba(0,0,0,0.25)] backdrop-blur-2xl sm:p-9">
-          {/* Glass highlight */}
           <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/80" />
 
           <div className="pointer-events-none absolute -right-24 -top-24 h-48 w-48 rounded-full bg-white/20 blur-3xl" />
@@ -63,7 +58,6 @@ export default function ForgotPasswordPage() {
           <div className="relative z-10">
             {!sent ? (
               <>
-                {/* Heading */}
                 <div>
                   <h1 className="text-2xl font-semibold tracking-[-0.04em] text-white drop-shadow">
                     Forgot password?
@@ -75,7 +69,6 @@ export default function ForgotPasswordPage() {
                   </p>
                 </div>
 
-                {/* Form */}
                 <form onSubmit={handleSubmit} className="mt-7 space-y-5">
                   <div>
                     <label
@@ -104,7 +97,6 @@ export default function ForgotPasswordPage() {
                   </button>
                 </form>
 
-                {/* Back to login */}
                 <div className="mt-7 text-center">
                   <Link
                     href="/login"
@@ -116,7 +108,6 @@ export default function ForgotPasswordPage() {
               </>
             ) : (
               <>
-                {/* Success state */}
                 <div className="text-center">
                   <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-white/30 bg-white/20">
                     <svg
@@ -161,7 +152,6 @@ export default function ForgotPasswordPage() {
           </div>
         </div>
 
-        {/* Terms */}
         <p className="mt-6 text-center text-xs text-white/60">
           By continuing, you agree to Session's Terms and Privacy Policy.
         </p>

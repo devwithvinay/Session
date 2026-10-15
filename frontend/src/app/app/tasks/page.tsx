@@ -77,8 +77,6 @@ export default function TasksPage() {
   const [error, setError] =
     useState("");
 
-  /* ---------------- FETCH TASKS ---------------- */
-
   const fetchTasks = useCallback(async () => {
     try {
       setLoading(true);
@@ -104,13 +102,9 @@ export default function TasksPage() {
     }
   }, []);
 
-  /* ---------------- INITIAL LOAD ---------------- */
-
   useEffect(() => {
     fetchTasks();
   }, [fetchTasks]);
-
-  /* ---------------- SYNC WITH DASHBOARD ---------------- */
 
   useEffect(() => {
     const handleTaskUpdated = () => {
@@ -129,8 +123,6 @@ export default function TasksPage() {
       );
     };
   }, [fetchTasks]);
-
-  /* ---------------- HELPERS ---------------- */
 
   const isToday = (date?: string) => {
     if (!date) return false;
@@ -206,8 +198,6 @@ export default function TasksPage() {
     );
   };
 
-  /* ---------------- ADD TASK ---------------- */
-
   const handleAddTask = async (
     e: FormEvent<HTMLFormElement>,
   ) => {
@@ -258,17 +248,8 @@ export default function TasksPage() {
         );
       }
 
-      /*
-       * IMPORTANT:
-       * Fetch the actual server state instead
-       * of only modifying local state.
-       */
       await fetchTasks();
 
-      /*
-       * Tell Dashboard and other task
-       * components that the task list changed.
-       */
       window.dispatchEvent(
         new Event("task-updated"),
       );
@@ -294,8 +275,6 @@ export default function TasksPage() {
     }
   };
 
-  /* ---------------- COMPLETE / UNCOMPLETE ---------------- */
-
   const toggleTask = async (
     task: Task,
   ) => {
@@ -320,15 +299,8 @@ export default function TasksPage() {
         );
       }
 
-      /*
-       * Get the same state that the
-       * backend has stored.
-       */
       await fetchTasks();
 
-      /*
-       * Synchronize Dashboard.
-       */
       window.dispatchEvent(
         new Event("task-updated"),
       );
@@ -345,8 +317,6 @@ export default function TasksPage() {
       );
     }
   };
-
-  /* ---------------- EDIT TASK ---------------- */
 
   const startEditing = (
     task: Task,
@@ -444,8 +414,6 @@ export default function TasksPage() {
     }
   };
 
-  /* ---------------- DELETE TASK ---------------- */
-
   const deleteTask = async (
     taskId: string,
   ) => {
@@ -493,8 +461,6 @@ export default function TasksPage() {
     }
   };
 
-  /* ---------------- COUNTS ---------------- */
-
   const activeTasks =
     tasks.filter(
       (task) => !task.completed,
@@ -516,8 +482,6 @@ export default function TasksPage() {
       (task) =>
         isUpcoming(task.dueDate),
     );
-
-  /* ---------------- FILTER ---------------- */
 
   const filteredTasks =
     useMemo(() => {
@@ -564,8 +528,6 @@ export default function TasksPage() {
       return result;
     }, [tasks, view, search]);
 
-  /* ---------------- PRIORITY ---------------- */
-
   const priorityConfig = {
     high: {
       label: "High",
@@ -586,15 +548,10 @@ export default function TasksPage() {
     },
   };
 
-  /* ---------------- UI ---------------- */
-
   return (
     <main className="min-h-screen px-4 py-8 text-white sm:px-6 md:px-10 lg:px-12">
       <div className="mx-auto w-full max-w-[1180px]">
         <div className="overflow-hidden rounded-[30px] border border-white/20 bg-white/[0.075] shadow-2xl shadow-black/20 backdrop-blur-2xl">
-
-          {/* HEADER */}
-
           <div className="border-b border-white/10 px-6 py-7 sm:px-8 md:px-10">
             <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
 
@@ -622,8 +579,6 @@ export default function TasksPage() {
                 + Add task
               </button>
             </div>
-
-            {/* STATS */}
 
             <div className="mt-7 grid grid-cols-3 gap-3">
 
@@ -660,12 +615,7 @@ export default function TasksPage() {
             </div>
           </div>
 
-          {/* CONTENT */}
-
           <div className="grid md:grid-cols-[210px_1fr]">
-
-            {/* SIDEBAR */}
-
             <aside className="border-b border-white/10 p-5 md:border-b-0 md:border-r md:p-6">
 
               <p className="mb-3 px-3 text-xs font-semibold uppercase tracking-[0.15em] text-white/30">
@@ -735,12 +685,7 @@ export default function TasksPage() {
               </div>
             </aside>
 
-            {/* TASK AREA */}
-
             <section className="min-w-0 p-5 sm:p-7 md:p-8">
-
-              {/* SEARCH */}
-
               <div className="relative mb-6">
 
                 <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-lg text-white/30">
@@ -760,15 +705,11 @@ export default function TasksPage() {
 
               </div>
 
-              {/* ERROR */}
-
               {error && (
                 <div className="mb-5 rounded-xl border border-red-400/20 bg-red-400/10 px-4 py-3 text-sm text-red-200">
                   {error}
                 </div>
               )}
-
-              {/* ADD TASK */}
 
               {showAddForm && (
                 <form
@@ -872,8 +813,6 @@ export default function TasksPage() {
                   </div>
                 </form>
               )}
-
-              {/* TASK LIST */}
 
               <div className="overflow-hidden rounded-2xl border border-white/12 bg-white/[0.035]">
 
@@ -1024,8 +963,6 @@ export default function TasksPage() {
                         ) : (
                           <div className="flex items-start gap-4 px-4 py-5 transition hover:bg-white/[0.045] sm:px-5">
 
-                            {/* CHECKBOX */}
-
                             <button
                               type="button"
                               onClick={() =>
@@ -1045,8 +982,6 @@ export default function TasksPage() {
                                 </span>
                               )}
                             </button>
-
-                            {/* DETAILS */}
 
                             <div className="min-w-0 flex-1">
 
@@ -1074,8 +1009,6 @@ export default function TasksPage() {
 
                                 </div>
 
-                                {/* PRIORITY */}
-
                                 <div
                                   className={`flex min-w-[100px] items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-4 py-2 text-sm ${config.text}`}
                                 >
@@ -1085,8 +1018,6 @@ export default function TasksPage() {
 
                                   {config.label}
                                 </div>
-
-                                {/* DUE DATE */}
 
                                 <div className="text-right">
 
@@ -1148,8 +1079,6 @@ export default function TasksPage() {
                               </div>
                             </div>
 
-                            {/* ACTIONS */}
-
                             <div className="flex shrink-0 gap-1 opacity-100 transition md:opacity-0 md:group-hover:opacity-100">
 
                               <button
@@ -1193,8 +1122,6 @@ export default function TasksPage() {
     </main>
   );
 }
-
-/* ---------------- HELPERS ---------------- */
 
 function getTodayDate() {
   const today = new Date();

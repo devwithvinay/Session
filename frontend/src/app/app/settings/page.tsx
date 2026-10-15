@@ -135,7 +135,6 @@ export default function SettingsPage() {
   return (
     <div className="min-h-screen px-5 py-6 md:px-8 lg:px-10">
       <div className="mx-auto w-full max-w-[1100px]">
-        {/* Header */}
         <div className="mb-8">
           <p className="text-sm font-medium text-white/55">Preferences</p>
 
@@ -149,7 +148,6 @@ export default function SettingsPage() {
         </div>
 
         <div className="space-y-5">
-          {/* Profile */}
           <SettingsCard
             icon={<UserIcon />}
             title="Profile"
@@ -200,7 +198,6 @@ export default function SettingsPage() {
             </div>
           </SettingsCard>
 
-          {/* Appearance */}
           <SettingsCard
             icon={<PaletteIcon />}
             title="Appearance"
@@ -239,7 +236,6 @@ export default function SettingsPage() {
             </div>
           </SettingsCard>
 
-          {/* Focus */}
           <SettingsCard
             icon={<TimerIcon />}
             title="Focus"
@@ -284,7 +280,6 @@ export default function SettingsPage() {
             </div>
           </SettingsCard>
 
-          {/* Notifications */}
           <SettingsCard
             icon={<BellIcon />}
             title="Notifications"
@@ -307,7 +302,6 @@ export default function SettingsPage() {
             </div>
           </SettingsCard>
 
-          {/* Account */}
           <SettingsCard
             icon={<ShieldIcon />}
             title="Account"
@@ -335,7 +329,6 @@ export default function SettingsPage() {
             </div>
           </SettingsCard>
 
-          {/* Version */}
           <div className="pb-6 text-center text-xs text-white/35">
             Session · Settings
           </div>
@@ -344,8 +337,6 @@ export default function SettingsPage() {
     </div>
   );
 }
-
-/* ---------------- COMPONENTS ---------------- */
 
 function SettingsCard({
   icon,
@@ -516,8 +507,6 @@ function ToggleRow({
     </div>
   );
 }
-
-/* ---------------- ICONS ---------------- */
 
 function UserIcon() {
   return (
